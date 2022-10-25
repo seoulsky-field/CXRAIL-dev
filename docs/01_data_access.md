@@ -1,7 +1,7 @@
 ---------------
 
 <p align="center">
-  <img height="100" src="assets/cxrail_logo.png" />
+  <img height="100" src="../assets/cxrail_logo.png" />
 </p>
 
 <h1 align="center">

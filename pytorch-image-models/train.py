@@ -650,22 +650,26 @@ def main():
     )
 
     # setup loss function
-    if args.jsd_loss:
-        assert num_aug_splits > 1  # JSD only valid with aug splits set
-        train_loss_fn = JsdCrossEntropy(num_splits=num_aug_splits, smoothing=args.smoothing)
-    elif mixup_active:
-        # smoothing is handled with mixup target transform which outputs sparse, soft targets
-        if args.bce_loss:
-            train_loss_fn = BinaryCrossEntropy(target_threshold=args.bce_target_thresh)
-        else:
-            train_loss_fn = SoftTargetCrossEntropy()
-    elif args.smoothing:
-        if args.bce_loss:
-            train_loss_fn = BinaryCrossEntropy(smoothing=args.smoothing, target_threshold=args.bce_target_thresh)
-        else:
-            train_loss_fn = LabelSmoothingCrossEntropy(smoothing=args.smoothing)
-    else:
-        train_loss_fn = nn.CrossEntropyLoss()
+    # ==========(Original timm)==========
+    # if args.jsd_loss:
+    #     assert num_aug_splits > 1  # JSD only valid with aug splits set
+    #     train_loss_fn = JsdCrossEntropy(num_splits=num_aug_splits, smoothing=args.smoothing)
+    # elif mixup_active:
+    #     # smoothing is handled with mixup target transform which outputs sparse, soft targets
+    #     if args.bce_loss:
+    #         train_loss_fn = BinaryCrossEntropy(target_threshold=args.bce_target_thresh)
+    #     else:
+    #         train_loss_fn = SoftTargetCrossEntropy()
+    # elif args.smoothing:
+    #     if args.bce_loss:
+    #         train_loss_fn = BinaryCrossEntropy(smoothing=args.smoothing, target_threshold=args.bce_target_thresh)
+    #     else:
+    #         train_loss_fn = LabelSmoothingCrossEntropy(smoothing=args.smoothing)
+    # else:
+    #     train_loss_fn = nn.CrossEntropyLoss()
+    # ==========(Customized)==========
+    train_loss_fn = nn.CrossEntropyLoss()
+    # ==============================
     train_loss_fn = train_loss_fn.to(device=device)
     validate_loss_fn = nn.CrossEntropyLoss().to(device=device)
 
@@ -843,11 +847,20 @@ def train_one_epoch(
                 input, target = mixup_fn(input, target)
         if args.channels_last:
             input = input.contiguous(memory_format=torch.channels_last)
-
+        # ==========(Original timm)==========
+        # with amp_autocast():
+        #     output = model(input)
+        #     loss = loss_fn(output, target)
+        # ==========(Customized)==========
+        target = torch.randn(args.batch_size, args.num_classes).to(device) # Just for size matching (should be removed)
         with amp_autocast():
-            output = model(input)
+            output = torch.softmax(model(input), dim=1) # softmax for multilabel classification
             loss = loss_fn(output, target)
 
+        if output.size() != target.size():
+            print(f'Target shape : [{target.size()}] || Model output shape : [{output.size()}]')
+            raise ValueError('Model output and target have different shape')
+        # ==============================
         if not args.distributed:
             losses_m.update(loss.item(), input.size(0))
 

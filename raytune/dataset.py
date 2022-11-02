@@ -72,4 +72,4 @@ def load_dataset(train_df, valid_df):
     train_dataset = ImageDataset(train_df, cfg)
     val_dataset = ImageDataset(valid_df, cfg)
 
-    return train_dataset, valid_dataset
+    return train_dataset, val_dataset

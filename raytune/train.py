@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from ray import air, tune
 from sklearn.metrics import roc_auc_score
 
 from dataset import load_dataset
@@ -12,6 +13,9 @@ import dataset
 from dataset import ImageDataset
 from model import DenseNet121
 from config import cfg
+from torch.utils.data import DataLoader
+
+cfg = cfg()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -28,9 +32,10 @@ def train_chexpert(ray_config, checkpoint_dir=None, data_dir=None):
         net.load_state_dict(model_state)
         optimizer.load_state_dict(optimizer_state)
 
+
     train_df, valid_df = dataset.assign_label(cfg.train_csv, cfg.valid_csv)
     
-    train_datset, val_dataset = load_dataset(train_df, valid_df)
+    train_dataset, val_dataset = load_dataset(train_df, valid_df)
     train_loader = DataLoader(train_dataset,
                           batch_size=int(ray_config["batch_size"]),
                           num_workers=cfg.num_workers,
@@ -46,7 +51,7 @@ def train_chexpert(ray_config, checkpoint_dir=None, data_dir=None):
     for epoch in range(1, 2):  # loop over the dataset multiple times
         running_loss = 0.0
         epoch_steps = 0
-        for i, data in enumerate(trainloader, 0):
+        for i, data in enumerate(train_loader, 0):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
@@ -73,7 +78,7 @@ def train_chexpert(ray_config, checkpoint_dir=None, data_dir=None):
         val_steps = 0
         total = 0
         correct = 0
-        for i, data in enumerate(valloader, 0):
+        for i, data in enumerate(val_loader, 0):
             with torch.no_grad():
                 inputs, labels = data
                 inputs, labels = inputs.to(device), labels.to(device)

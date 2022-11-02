@@ -1,3 +1,4 @@
+import torch.nn as nn
 #ray
 from ray import air, tune
 from ray.tune import Trainable, run
@@ -15,14 +16,14 @@ from ray.tune.logger import DEFAULT_LOGGERS
 # from ray.tune.integration.wandb import WandbLogger
 from pytorch_lightning.loggers import WandbLogger
 
-#in
-from config import cfg , seed_everything
-from train import train_chexpert
+from model import DenseNet121
 from train import train_chexpert
 
 def main(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
     # data_dir = os.path.abspath("./data")
     # load_data(data_dir)
+
+    #search_space
     ray_config = {
         "lr": tune.loguniform(1e-4, 1e-1),
         "batch_size": tune.choice([128, 256, 512])

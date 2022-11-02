@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from ray import air, tune
 from sklearn.metrics import roc_auc_score
 
 from dataset import load_dataset

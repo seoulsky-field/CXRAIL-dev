@@ -29,12 +29,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 )
 def main(cfg: DictConfig):
 
-    # set parameters
-    search_space = {
-        "lr": tune.loguniform(1e-4, 1e-1),
-        #"batch_size": tune.choice([128, 256, 512])
-    }
-    trainable = trainval(cfg, search_space)
+    # set parameters   (in config: ray_config)
+    # search_space = {
+    #     "lr": tune.loguniform(1e-4, 1e-1),
+    #     #"batch_size": tune.choice([128, 256, 512])
+    # }
+    trainable = trainval(cfg)
     search_alg = HyperOptSearch(space=search_space,metric="mean_accuracy",mode="max"),
     scheduler = ASHAScheduler(metric="mean_accuracy", mode="max"),
     reporter = CLIReporter(
@@ -43,7 +43,7 @@ def main(cfg: DictConfig):
 
     result = tune.run(
         trainable = trainable,
-        config = search_space,
+        config = cfg.ray,
         num_samples=10,
         scheduler = scheduler,
         search_alg = search_alg, 

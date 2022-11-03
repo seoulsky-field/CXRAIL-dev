@@ -16,3 +16,4 @@ defaults:
         - optimizer: adam
         - loss: BCE
         - model: resnet
+        - ray: search_space

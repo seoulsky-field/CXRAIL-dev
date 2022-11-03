@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import roc_auc_score
 
 from data_loader import dataset_CheXpert # Load our custom loader
-from data_loader.dataset_CheXpert import *
+#from data_loader.dataset_CheXpert import *
 
 
 best_val_roc_auc = 0
@@ -77,12 +77,13 @@ def val(dataloader, model, loss_f):
     return val_loss, val_roc_auc
 
 
-@hydra.main(
-    version_base = None, 
-    config_path='config', 
-    config_name = 'config'
-    )
-def trainval(cfg: DictConfig, ray_config):  
+# @hydra.main(
+#     version_base = None, 
+#     config_path='config', 
+#     config_name = 'config'
+#     )
+# def trainval(cfg: DictConfig):
+def trainval(cfg):
     train_dataset = dataset_CheXpert.ChexpertDataset('train', **cfg.Dataset)
     val_dataset = dataset_CheXpert.ChexpertDataset('valid', **cfg.Dataset)
 
@@ -93,7 +94,7 @@ def trainval(cfg: DictConfig, ray_config):
     model = model.to(device)
     loss_f = instantiate(cfg.loss)
     
-    optimizer = optim.SGD(model.parameters(), lr=ray_config["lr"], momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=instantiate(cfg.ray.lr).sample(), momentum=0.9)
 
     print (device)
     for t in range(cfg.epochs):

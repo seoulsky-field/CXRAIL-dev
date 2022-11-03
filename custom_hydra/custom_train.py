@@ -1,7 +1,7 @@
 
 import hydra
 from hydra.utils import get_original_cwd
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 #from ray import air, tune
 import os
@@ -75,6 +75,9 @@ def val(dataloader, model, loss_f):
     config_name = 'config'
     )
 def trainval(cfg: DictConfig):
+    ########## 1103 추가 - configuration 출력 ###########
+    print(OmegaConf.to_yaml(cfg))
+    ####################################################
     train_dataset = dataset_CheXpert.ChexpertDataset('train', **cfg.Dataset)
     val_dataset = dataset_CheXpert.ChexpertDataset('valid', **cfg.Dataset)
     train_loader = torch.utils.data.DataLoader(train_dataset, **cfg.Dataloader.train)
@@ -83,7 +86,8 @@ def trainval(cfg: DictConfig):
     model = model.to(device)
     loss_f = instantiate(cfg.loss)
     ######## 예나 수정 (optimizer hydra로) #######
-    optimizer = instantiate(cfg.optimizer, params=model.parameters())
+    #optimizer = instantiate(cfg.optimizer, params=model.parameters())   ##When using optimizer/loss from torch.utils
+    optimizer = instantiate(cfg.optimizer, model=model, loss_fn=loss_f)  ##When using optimizer/loss from libauc
     #############################################
    
     print (device)

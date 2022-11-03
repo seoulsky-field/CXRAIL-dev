@@ -1,0 +1,4 @@
+_target_: timm.create_model
+model_name: densenet121
+pretrained: True
+num_classes: 5

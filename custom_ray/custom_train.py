@@ -1,13 +1,13 @@
-# optimizer 수정
-# 함수 인자로 ray_config 추가
-# tune.report
-
+# hydara
 import hydra
 from hydra.utils import get_original_cwd
 from omegaconf import DictConfig
 from hydra.utils import instantiate
 
+# ray
 from ray import air, tune
+from ray.air.checkpoint import Checkpoint
+from ray.air import session
 
 import os
 import numpy as np
@@ -44,13 +44,16 @@ def train(dataloader, val_loader, model, loss_f, optimizer, cfg):
         if batch % 500 == 0:
             loss, current = loss.item(), batch * len(data_X)
             val_loss, val_roc_auc = val(val_loader, model, loss_f)
+            
+            tune.report(loss =val_loss,  accuracy = val_roc_auc)
+
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
                 torch.save(model.state_dict(), cfg.ckpt_name)
                 print("Best model saved.")
-            print(f"Batch ID: {batch}, loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, [{current:>5d}/{size:>5d}]")
+            print(f"Batch ID: {batch}, loss: {loss:>4f}, val_loss = {val_loss:>4f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, [{current:>5d}/{size:>5d}]")
         
-        tune.report(loss=val_loss, accuracy=val_roc_auc)
+            
 
 def val(dataloader, model, loss_f):
     size = len(dataloader.dataset)
@@ -73,39 +76,31 @@ def val(dataloader, model, loss_f):
     val_roc_auc = roc_auc_score(val_true, val_pred, average='macro', multi_class='ovr')
     
     val_loss /= num_batches
-    #print(f"Batch ID: {idx}, Accuracy: {(100*correct):>0.1f}, loss: {loss:>7f}, [{current:>5d}/{size:>5d}], val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, [{current:>5d}/{size:>5d}]")
     return val_loss, val_roc_auc
 
 
-# @hydra.main(
-#     version_base = None, 
-#     config_path='config', 
-#     config_name = 'config'
-#     )
-# def trainval(cfg: DictConfig):
-def trainval(cfg):
-    train_dataset = dataset_CheXpert.ChexpertDataset('train', **cfg.Dataset)
-    val_dataset = dataset_CheXpert.ChexpertDataset('valid', **cfg.Dataset)
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, **cfg.Dataloader.train)
-    val_loader = torch.utils.data.DataLoader(val_dataset, **cfg.Dataloader.test)
+def trainval(config, hydra_cfg):
+    train_dataset = dataset_CheXpert.ChexpertDataset('train', **hydra_cfg.Dataset)
+    val_dataset = dataset_CheXpert.ChexpertDataset('valid', **hydra_cfg.Dataset)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, **hydra_cfg.Dataloader.train)
+    val_loader = torch.utils.data.DataLoader(val_dataset, **hydra_cfg.Dataloader.test)
     
-    model = instantiate(cfg.model)
+    model = instantiate(hydra_cfg.model)
     model = model.to(device)
-    loss_f = instantiate(cfg.loss)
+    loss_f = instantiate(hydra_cfg.loss)
     
-    optimizer = optim.SGD(model.parameters(), lr=instantiate(cfg.ray.lr).sample(), momentum=0.9)
+    optimizer = optim.Adam(model.parameters(), lr=config['lr'], betas=(0.9, 0.999), eps=1e-8)
+
 
     print (device)
-    for t in range(cfg.epochs):
+#    for t in range(hydra_cfg.epochs):
+    for t in range(1):
         print(f"Epoch {t+1}")
-        train(train_loader, val_loader, model, loss_f, optimizer, cfg)
+        train(train_loader, val_loader, model, loss_f, optimizer, hydra_cfg)
         #test(val_dataloader, model, loss_f)
         print("---------------------------------")
-    
-    # with tune.checkpoint_dir(cfg.epoch) as checkpoint_dir:
-    #     path = os.path.join(checkpoint_dir, "checkpoint")
-    #     torch.save((model.state_dict(), optimizer.state_dict()), path)
 
     print("Done!")
 

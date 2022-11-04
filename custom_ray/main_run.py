@@ -20,7 +20,7 @@ from hydra.utils import instantiate
 
 from custom_train import trainval
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 
 
 @hydra.main(
@@ -41,8 +41,8 @@ def main(cfg: DictConfig):
     
     result = tune.run(
         partial(trainval, hydra_cfg=cfg),
-        config = param_space,
-        num_samples=1,
+        #config = param_space,
+        num_samples=10,
         scheduler = scheduler,
         search_alg = search_alg, 
         progress_reporter=reporter)

@@ -20,7 +20,7 @@ from hydra.utils import instantiate
 
 from custom_train import trainval
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 
 @hydra.main(
     version_base = None, 
@@ -34,21 +34,20 @@ def main(cfg: DictConfig):
         'batch_size': tune.choice([128, 256]),
     }
     tune_config = tune.TuneConfig(
-        #search_alg = HyperOptSearch(space=param_space,metric="loss",mode="min"),
+        search_alg = HyperOptSearch(space=param_space,metric="loss",mode="min"),
         scheduler = ASHAScheduler(metric="loss", mode="min"),
         num_samples=10
     )
     reporter = CLIReporter(
         parameter_columns=["lr"],
         metric_columns=["loss", "accuracy", "training_iteration"])
-    run_config = air.RunConfig(progress_reporter=reporter)
-    # run_config=air.RunConfig(
-    #         local_dir="/home/CheXpert_code/jieon/Baseline/raytune_class3/saved/logs",
-    #         name="test_experiment"),
+    run_config = air.RunConfig(progress_reporter=reporter,
+        local_dir="/home/CheXpert_code/jieon/Baseline/custom_ray/saved/logs",
+        name="test_experiment")
     
     tuner = tune.Tuner(
         trainable = partial(trainval, hydra_cfg=cfg),
-        param_space = param_space,
+        #param_space = param_space,
         tune_config = tune_config,
         run_config = run_config
     )

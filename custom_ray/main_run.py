@@ -45,7 +45,11 @@ def main(cfg: DictConfig):
         num_samples=10,
         scheduler = scheduler,
         search_alg = search_alg, 
-        progress_reporter=reporter)
+        progress_reporter=reporter,
+        resources_per_trial={
+                'cpu': 8, 
+                'gpu': int(torch.cuda.device_count()),
+                })
 
 
     best_trial = result.get_best_trial("loss", "min", "last")

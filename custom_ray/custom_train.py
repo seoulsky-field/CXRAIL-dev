@@ -26,7 +26,7 @@ from data_loader import dataset_CheXpert # Load our custom loader
 from data_loader.dataset_CheXpert import *
 
 best_val_roc_auc = 0
-device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def train(dataloader, val_loader, model, loss_f, optimizer, cfg):
@@ -50,7 +50,7 @@ def train(dataloader, val_loader, model, loss_f, optimizer, cfg):
             val_loss, val_roc_auc, val_pred, val_true = val(val_loader, model, loss_f)
             ###############################################
 
-            tune.report(loss =val_loss,  accuracy = val_roc_auc)
+            tune.report(loss=loss, val_loss=val_loss, val_score=val_roc_auc)
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc

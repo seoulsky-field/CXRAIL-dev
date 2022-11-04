@@ -20,7 +20,7 @@ from hydra.utils import instantiate
 
 from custom_train import trainval
 
-device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 @hydra.main(
     version_base = None, 
@@ -40,7 +40,7 @@ def main(cfg: DictConfig):
     )
     reporter = CLIReporter(
         parameter_columns=["lr"],
-        metric_columns=["loss", "accuracy", "training_iteration"])
+        metric_columns=["loss", "val_loss", "val_score", "training_iteration"])
     run_config = air.RunConfig(progress_reporter=reporter,
         local_dir="./ray_logs/",
         name="test_experiment")

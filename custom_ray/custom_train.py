@@ -29,7 +29,7 @@ best_val_roc_auc = 0
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def train(dataloader, val_loader, model, loss_f, optimizer, cfg):
+def train(dataloader, val_loader, model, loss_f, optimizer, cfg, epoch):
     size = len(dataloader.dataset)
     global best_val_roc_auc
     model.train()
@@ -50,7 +50,7 @@ def train(dataloader, val_loader, model, loss_f, optimizer, cfg):
             val_loss, val_roc_auc, val_pred, val_true = val(val_loader, model, loss_f)
             ###############################################
 
-            tune.report(loss=loss, val_loss=val_loss, val_score=val_roc_auc)
+            tune.report(loss=loss, val_loss=val_loss, val_score=val_roc_auc, current_epoch=epoch+1, progress_of_epoch=f"{100*current/size:.1f} %")
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
@@ -99,7 +99,7 @@ def val(dataloader, model, loss_f):
 
 def trainval(config, hydra_cfg):
     ########## 1103 추가 - configuration 출력 ###########
-    print(OmegaConf.to_yaml(hydra_cfg))
+    # print(OmegaConf.to_yaml(hydra_cfg))
     ####################################################
     train_dataset = dataset_CheXpert.ChexpertDataset('train', **hydra_cfg.Dataset)
     val_dataset = dataset_CheXpert.ChexpertDataset('valid', **hydra_cfg.Dataset)
@@ -117,9 +117,9 @@ def trainval(config, hydra_cfg):
     optimizer = optim.Adam(model.parameters(), lr=config['lr'], betas=(0.9, 0.999), eps=1e-8)
 
     print (device)
-    for t in range(hydra_cfg.epochs):
-        print(f"Epoch {t+1}")
-        train(train_loader, val_loader, model, loss_f, optimizer, hydra_cfg)
+    for epoch in range(hydra_cfg.epochs):
+        print(f"Epoch {epoch+1}")
+        train(train_loader, val_loader, model, loss_f, optimizer, hydra_cfg, epoch)
         #test(val_dataloader, model, loss_f)
         print("---------------------------------")
     # with tune.checkpoint_dir(cfg.epoch) as checkpoint_dir:

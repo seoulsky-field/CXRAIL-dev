@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+import multiprocessing
 from functools import partial
 
 # ray
@@ -40,16 +41,21 @@ def main(cfg: DictConfig):
     )
     reporter = CLIReporter(
         parameter_columns=["lr"],
-        metric_columns=["loss", "val_loss", "val_score", "training_iteration"])
-    run_config = air.RunConfig(progress_reporter=reporter,
+        metric_columns=["loss", "val_loss", "val_score", "current_epoch", "progress_of_epoch"],
+        max_report_frequency=5, # 5 seconds default
+        )
+    run_config = air.RunConfig(
+        progress_reporter=reporter,
         local_dir="./ray_logs/",
-        name="test_experiment")
+        name="test_experiment",
+        verbose=2, # 0 silent, 1 = only status updates, 2 = status and brief results, 3 = status and detailed results. Defaults to 2.
+        )
     
     tuner = tune.Tuner(
         trainable = tune.with_resources(
             partial(trainval, hydra_cfg=cfg), 
             {
-                'cpu': 8, 
+                'cpu': int(round(multiprocessing.cpu_count()/2)), 
                 'gpu': int(torch.cuda.device_count()),
                 }
             ),

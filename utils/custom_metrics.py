@@ -93,7 +93,7 @@ def reports(preds, labels, train_cols):
         print("******************************************************")
 
 
-def custom_metrics(preds, labels):
+def custom_metrics(preds, labels, print_classification_result=True):
     train_cols = ['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis',  'Pleural Effusion']
     
     ### accuracy of each labels
@@ -110,4 +110,5 @@ def custom_metrics(preds, labels):
     # cm_display(preds, labels, train_cols)
 
     ### classification reports
-    reports(preds, labels, train_cols)
+    if print_classification_result:
+        reports(preds, labels, train_cols)

@@ -7,29 +7,6 @@ import os
 from PIL import Image
 import pandas as pd
 
-class Config():
-    root_path = '/home/dataset/chexpert/'
-    ori_dir = 'CheXpert-v1.0/'
-    small_dir = 'CheXpert-v1.0-small/'
-    pad_dir = 'CheXpert-v1.0-pad224/'
-    mode = 'train'
-    use_frontal = True
-    # train_cols=['Cardiomegaly']
-    train_cols=['Cardiomegaly', 'Edema', 'Consolidation', 'Atelectasis',  'Pleural Effusion']
-
-    use_enhancement = False          # upsampling
-    enhance_cols = ['Cardiomegaly', 'Consolidation']
-    enhance_time = 1
-
-    flip_label = False
-    shuffle = True
-    seed = 777
-    image_size = 224
-    verbose = True
-
-
-cfg = Config()
-
 
 def image_augmentation(image):
     img_aug = tfs.Compose([tfs.RandomAffine(degrees=(-15, 15), translate=(0.05, 0.05), scale=(0.95, 1.05), fill=128)]) # pytorch 3.7: fillcolor --> fill
@@ -39,15 +16,14 @@ def image_augmentation(image):
 
 class ChexpertDataset(Dataset):
     """Image generator
-        Args:
+        Args:krurr
             dir_path (str): path to .csv file contains img paths and class labels
             mode (str, optional): define which mode you are using. Defaults to 'train'.
             use_frontal (bull) : 
     """
-    def __init__(self, root_path, folder_path, mode, use_frontal, train_cols, use_enhancement, enhance_cols, enhance_time, flip_label, shuffle, seed, image_size, verbose):
+    def __init__(self, mode, root_path, folder_path, use_frontal, train_cols, use_enhancement, enhance_cols, enhance_time, flip_label, shuffle, seed, image_size, verbose):
         self.root_path = root_path
         self.folder_path = folder_path
-        self.mode = mode
         self.use_frontal = use_frontal
         self.train_cols = train_cols
         self.use_enhancement = use_enhancement
@@ -58,6 +34,7 @@ class ChexpertDataset(Dataset):
         self.seed = seed
         self.image_size = image_size
         self.verbose = verbose
+        self.mode = mode
 
         # Load data from csv
         if self.mode == 'train':

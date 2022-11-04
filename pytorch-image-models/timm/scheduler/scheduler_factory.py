@@ -60,7 +60,7 @@ def create_scheduler(
 def create_scheduler_v2(
         optimizer: Optimizer,
         sched: str = 'cosine',
-        num_epochs: int = 300,
+        num_epochs: int = 5,
         decay_epochs: int = 90,
         decay_milestones: List[int] = (90, 180, 270),
         cooldown_epochs: int = 0,

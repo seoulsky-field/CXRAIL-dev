@@ -35,7 +35,7 @@ def main(cfg: DictConfig):
     }
     tune_config = tune.TuneConfig(
         search_alg = HyperOptSearch(space=param_space,metric="loss",mode="min"),
-        scheduler = ASHAScheduler(metric="loss", mode="min"),
+        # scheduler = ASHAScheduler(metric="loss", mode="min"),
         num_samples=10
     )
     reporter = CLIReporter(
@@ -46,7 +46,13 @@ def main(cfg: DictConfig):
         name="test_experiment")
     
     tuner = tune.Tuner(
-        trainable = partial(trainval, hydra_cfg=cfg),
+        trainable = tune.with_resources(
+            partial(trainval, hydra_cfg=cfg), 
+            {
+                'cpu': 8, 
+                'gpu': int(torch.cuda.device_count()),
+                }
+            ),
         #param_space = param_space,
         tune_config = tune_config,
         run_config = run_config

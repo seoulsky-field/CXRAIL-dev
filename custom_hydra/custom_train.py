@@ -104,9 +104,11 @@ def trainval(cfg: DictConfig):
     model = instantiate(cfg.model)
     model = model.to(device)
     loss_f = instantiate(cfg.loss)
-    ######## 예나 수정 (optimizer hydra로) #######
-    #optimizer = instantiate(cfg.optimizer, params=model.parameters())   ##When using optimizer/loss from torch.utils
-    optimizer = instantiate(cfg.optimizer, model=model, loss_fn=loss_f)  ##When using optimizer/loss from libauc
+    ######## torch/libauc 둘다 사용할수있도록 if문 추가 #######
+    if cfg.optimizer._target_.startswith('torch'):
+        optimizer = instantiate(cfg.optimizer, params=model.parameters())
+    else:
+        optimizer = instantiate(cfg.optimizer, model=model, loss_fn=loss_f)
     #############################################
    
     print (device)

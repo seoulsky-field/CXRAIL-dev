@@ -42,7 +42,7 @@ def main(cfg: DictConfig):
         parameter_columns=["lr"],
         metric_columns=["loss", "accuracy", "training_iteration"])
     run_config = air.RunConfig(progress_reporter=reporter,
-        local_dir="/home/CheXpert_code/jieon/Baseline/custom_ray/saved/logs",
+        local_dir="./ray_logs/",
         name="test_experiment")
     
     tuner = tune.Tuner(

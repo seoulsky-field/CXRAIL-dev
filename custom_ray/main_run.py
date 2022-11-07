@@ -38,6 +38,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def main(cfg: DictConfig):
     #set config
     param_space = OmegaConf.to_container(instantiate(cfg.ray.param_space))
+    scheduler = instantiate(cfg.ray.scheduler)
     search_alg = instantiate(cfg.ray.search_alg, space=param_space)
     reporter = reporter = instantiate(cfg.ray.reporter)
 

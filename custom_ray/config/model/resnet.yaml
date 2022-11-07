@@ -1,3 +1,5 @@
+#config/model/resnet.yaml
+
 _target_: timm.create_model
 model_name: resnet50
 pretrained: True

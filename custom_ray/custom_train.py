@@ -111,10 +111,12 @@ def trainval(config, hydra_cfg):
     model = model.to(device)
     loss_f = instantiate(hydra_cfg.loss)
     ######## 예나 수정 (optimizer hydra로) #######
-    #optimizer = instantiate(cfg.optimizer, params=model.parameters())   ##When using optimizer/loss from torch.utils
-    #optimizer = instantiate(hydra_cfg.optimizer, model=model, loss_fn=loss_f)  ##When using optimizer/loss from libauc
+    if hydra_cfg.optimizer._target_.startswith('torch'):
+        optimizer = instantiate(hydra_cfg.optimizer, params=model.parameters(), lr = config['lr'])
+    else:
+        optimizer = instantiate(hydra_cfg.optimizer, model=model, loss_fn=loss_f, lr = config['lr']) 
     #############################################
-    optimizer = optim.Adam(model.parameters(), lr=config['lr'], betas=(0.9, 0.999), eps=1e-8)
+    #optimizer = optim.Adam(model.parameters(), lr=config['lr'], betas=(0.9, 0.999), eps=1e-8)
 
     print (device)
     for epoch in range(hydra_cfg.epochs):

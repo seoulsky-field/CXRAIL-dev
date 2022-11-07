@@ -17,7 +17,7 @@ enhance_cols:
 enhance_time: 1
 flip_label: False
 shuffle: True
-seed: 777
+seed: ${seed}
 image_size: 224
 verbose: True
 ##### mode를 config에서 제거    <<  이걸 포함시킬 좋은 방법이 있을 것 같긴 함

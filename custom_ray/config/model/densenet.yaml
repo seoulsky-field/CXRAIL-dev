@@ -1,3 +1,5 @@
+#config/model/densenet.yaml
+
 _target_: timm.create_model
 model_name: densenet121
 pretrained: True

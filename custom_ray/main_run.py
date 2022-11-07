@@ -6,11 +6,17 @@ from functools import partial
 import ray
 from ray import air, tune
 from ray.tune import Trainable, run
-from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from hyperopt import hp
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.air import ScalingConfig
+from omegaconf import DictConfig, OmegaConf
+
+# reporter
+from ray.tune import CLIReporter
+from ray.tune.experiment import Trial
+from typing import Any, Callable, Dict, List, Optional, Union
+from utils.custom_reporter import TrialTerminationReporter
 
 # hydra
 import hydra
@@ -20,7 +26,7 @@ from hydra.utils import instantiate
 
 from custom_train import trainval
 
-device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 @hydra.main(
@@ -29,20 +35,19 @@ device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
     config_name = 'config'
 )
 def main(cfg: DictConfig):
-    param_space = {
-        'lr': tune.loguniform(0.0001, 0.1),
-        'batch_size': tune.choice([128, 256]),
-    }
-    search_alg = HyperOptSearch(space=param_space, metric="loss", mode="min") #,붙여서 에러
+    # set config
+    param_space = OmegaConf.to_container(instantiate(cfg.ray))
+    search_alg = HyperOptSearch(space=param_space, metric="loss", mode="min")
     scheduler = ASHAScheduler(metric="loss", mode="min")
-    reporter = CLIReporter(
+    reporter = TrialTerminationReporter(       
         parameter_columns=["lr"],
-        metric_columns=["loss", "accuracy", "training_iteration"])
+        metric_columns=["loss", "val_loss", "val_score",  "current_epoch",  "progress_of_epoch" ])
     
+    # execute run
     result = tune.run(
         partial(trainval, hydra_cfg=cfg),
         #config = param_space,
-        num_samples=10,
+        num_samples=5,
         scheduler = scheduler,
         search_alg = search_alg, 
         progress_reporter=reporter,
@@ -52,8 +57,8 @@ def main(cfg: DictConfig):
                 })
 
 
-    best_trial = result.get_best_trial("loss", "min", "last")
-    print("Best trial config: {}".format(best_trial.param_space))
+    best_trial = result.get_best_trial(metric ="loss", mode="min", scope="last")
+    print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
     print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
 

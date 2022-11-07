@@ -19,8 +19,8 @@ from torch.utils.data import DataLoader
 # from sklearn.metrics import roc_auc_score
 from libauc.metrics import auc_roc_score
 import sys
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from utils import *
+#sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from utils.custom_metrics import *
 #########################
 from data_loader import dataset_CheXpert # Load our custom loader
 from data_loader.dataset_CheXpert import *
@@ -57,7 +57,7 @@ def train(dataloader, val_loader, model, loss_f, optimizer, cfg, epoch):
                 torch.save(model.state_dict(), cfg.ckpt_name)
                 print("Best model saved.")
                 ######### custom_metrics.py #######
-                custom_metrics(val_pred, val_true)
+                report_metrics(val_pred, val_true)
                 ###################################
             print(f"Batch ID: {batch}, loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, [{current:>5d}/{size:>5d}]")
         #### 주영 수정 ###

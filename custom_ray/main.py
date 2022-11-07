@@ -1,31 +1,34 @@
+'''
+주요 수정 사항 : run, tuner 중 run으로 통일 (추후에 변경 가능)
+'''
+
 import os
 import torch
 import torch.nn as nn
 import multiprocessing
 from functools import partial
+
 # ray
 import ray
 from ray import air, tune
 from ray.tune import Trainable, run
-# from ray.tune.schedulers import ASHAScheduler
-# from hyperopt import hp
-# from ray.tune.search.hyperopt import HyperOptSearch
+from ray.tune.schedulers import ASHAScheduler
+from hyperopt import hp
+from ray.tune.search.hyperopt import HyperOptSearch
 from ray.air import ScalingConfig
-from omegaconf import DictConfig, OmegaConf
 
 # reporter
 from ray.tune import CLIReporter
 from ray.tune.experiment import Trial
 from typing import Any, Callable, Dict, List, Optional, Union
-from utils.custom_reporter import TrialTerminationReporter
+from custom_utils.custom_reporter import TrialTerminationReporter
 
 # hydra
 import hydra
-from hydra.utils import get_original_cwd
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 
-from custom_train import trainval
+from train import trainval
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -36,11 +39,20 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     config_name = 'config'
 )
 def main(cfg: DictConfig):
-    #set config
     param_space = OmegaConf.to_container(instantiate(cfg.ray.param_space))
-    scheduler = instantiate(cfg.ray.scheduler)
+
+    #set config #1: default
     search_alg = instantiate(cfg.ray.search_alg, space=param_space)
-    reporter = reporter = instantiate(cfg.ray.reporter)
+    scheduler = instantiate(cfg.ray.scheduler)
+    reporter = TrialTerminationReporter(
+        parameter_columns=["lr"],
+        metric_columns=["loss", "val_loss", "val_score",  "current_epoch",  "progress_of_epoch"])
+
+    ##set config #2: use hydra
+    # scheduler = instantiate(cfg.ray.scheduler)
+    # search_alg = instantiate(cfg.ray.search_alg, space=param_space)
+    # reporter = instantiate(cfg.ray.reporter)
+    # scheduler = instantiate(cfg.ray.scheduler)
 
     # execute run
     result = tune.run(

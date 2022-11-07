@@ -2,9 +2,14 @@
 
 ckpt_name: 'best_saved.pth'
 epochs: 5
-lr: 0.0001
-batch_size: 64
+#lr: 0.1
+#batch_size: 64
 seed: 777
+num_classes: 5
+
+
+###ray###
+num_samples: 5
 
 
 #defaults
@@ -13,7 +18,8 @@ defaults:
         - _self_
         - Dataset: CheXpert
         - Dataloader: Dataloader 
-        - optimizer: adam
-        - loss: BCE
+        - optimizer: pesg
+        - loss: AUCM
         - model: resnet
-        - ray: search_space
+        - ray: raytune
+

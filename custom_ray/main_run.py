@@ -1,14 +1,15 @@
 import os
 import torch
 import torch.nn as nn
+import multiprocessing
 from functools import partial
 # ray
 import ray
 from ray import air, tune
 from ray.tune import Trainable, run
-from ray.tune.schedulers import ASHAScheduler
-from hyperopt import hp
-from ray.tune.search.hyperopt import HyperOptSearch
+# from ray.tune.schedulers import ASHAScheduler
+# from hyperopt import hp
+# from ray.tune.search.hyperopt import HyperOptSearch
 from ray.air import ScalingConfig
 from omegaconf import DictConfig, OmegaConf
 
@@ -35,24 +36,21 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     config_name = 'config'
 )
 def main(cfg: DictConfig):
-    # set config
-    param_space = OmegaConf.to_container(instantiate(cfg.ray))
-    search_alg = HyperOptSearch(space=param_space, metric="loss", mode="min")
-    scheduler = ASHAScheduler(metric="loss", mode="min")
-    reporter = TrialTerminationReporter(       
-        parameter_columns=["lr"],
-        metric_columns=["loss", "val_loss", "val_score",  "current_epoch",  "progress_of_epoch" ])
-    
+    #set config
+    param_space = OmegaConf.to_container(instantiate(cfg.ray.param_space))
+    search_alg = instantiate(cfg.ray.search_alg, space=param_space)
+    reporter = reporter = instantiate(cfg.ray.reporter)
+
     # execute run
     result = tune.run(
         partial(trainval, hydra_cfg=cfg),
-        #config = param_space,
-        num_samples=5,
+        config = param_space,
+        num_samples = cfg.ray.num_samples,
         scheduler = scheduler,
         search_alg = search_alg, 
         progress_reporter=reporter,
         resources_per_trial={
-                'cpu': 8, 
+                'cpu': int(round(multiprocessing.cpu_count()/2)), 
                 'gpu': int(torch.cuda.device_count()),
                 })
 

@@ -71,7 +71,7 @@ def main(cfg: DictConfig):
     best_trial = result.get_best_trial(metric ="loss", mode="min", scope="last")
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
-    print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
+    print("Best trial final validation accuracy: {}".format(best_trial.last_result["val_score"]))
 
     model = instantiate(cfg.model)
     model = model.to(device)

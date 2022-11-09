@@ -9,6 +9,10 @@ param_space:
                 categories:
                         - 64
                         - 128
+        weight_decay:
+                _target_: ray.tune.loguniform
+                lower: 0.0001
+                upper: 0.1
 
 search_alg:
         _target_: ray.tune.search.hyperopt.HyperOptSearch
@@ -21,7 +25,7 @@ scheduler:
         mode: min
 
 reporter: 
-        _target_: utils.custom_reporter.TrialTerminationReporter
+        _target_: custom_utils.custom_reporter.TrialTerminationReporter
         parameter_columns:
                 - lr
                 - batch_size
@@ -40,3 +44,5 @@ run_config:
         verbose: 2
 
 num_samples: ${num_samples}
+local_dir: './ray_logs/'
+name: 'test_experiment'

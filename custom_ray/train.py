@@ -16,6 +16,7 @@ from ray import tune
 from custom_utils.custom_metrics import *
 from custom_utils.custom_reporter import *
 from custom_utils.transform import *
+from custom_utils.utils import param_override
 from data_loader.dataset_CheXpert import *
 
 best_val_roc_auc = 0
@@ -87,9 +88,20 @@ def trainval(config, hydra_cfg):
     loss_f = instantiate(hydra_cfg.loss)
 
     if hydra_cfg.optimizer._target_.startswith('torch'):
-        optimizer = instantiate(hydra_cfg.optimizer, params=model.parameters(), lr = config['lr'])
+        optimizer = instantiate(
+            hydra_cfg.optimizer, 
+            params=model.parameters(), 
+            lr=param_override(hydra_cfg.optimizer['lr'], config['lr']),
+            weight_decay=param_override(hydra_cfg.optimizer['weight_decay'], config['weight_decay']),
+            )
     else:
-        optimizer = instantiate(hydra_cfg.optimizer, model=model, loss_fn=loss_f, lr = config['lr']) 
+        optimizer = instantiate(
+            hydra_cfg.optimizer, 
+            model=model, 
+            loss_fn=loss_f, 
+            lr=param_override(hydra_cfg.optimizer['lr'], config['lr']),
+            weight_decay=param_override(hydra_cfg.optimizer['weight_decay'], config['weight_decay']),
+            ) 
 
     print (device)
     for epoch in range(hydra_cfg.epochs):

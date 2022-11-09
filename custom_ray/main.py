@@ -42,17 +42,20 @@ def main(cfg: DictConfig):
     param_space = OmegaConf.to_container(instantiate(cfg.ray.param_space))
 
     #set config #1: default
-    search_alg = instantiate(cfg.ray.search_alg, space=param_space)
-    scheduler = instantiate(cfg.ray.scheduler)
-    reporter = TrialTerminationReporter(
-        parameter_columns=["lr"],
-        metric_columns=["loss", "val_loss", "val_score",  "current_epoch",  "progress_of_epoch"])
-
-    ##set config #2: use hydra
-    # scheduler = instantiate(cfg.ray.scheduler)
     # search_alg = instantiate(cfg.ray.search_alg, space=param_space)
-    # reporter = instantiate(cfg.ray.reporter)
     # scheduler = instantiate(cfg.ray.scheduler)
+    # reporter = TrialTerminationReporter(
+    #     parameter_columns=["lr"],
+    #     metric_columns=["loss", "val_loss", "val_score",  "current_epoch",  "progress_of_epoch"])
+
+    #set config #2: use hydra
+    scheduler = instantiate(cfg.ray.scheduler)
+    search_alg = instantiate(cfg.ray.search_alg, space=param_space)
+    reporter = CLIReporter(
+        parameter_columns=['lr', 'weight_decay'],
+        metric_columns=['loss', 'val_loss', 'val_score', 'current_epoch', 'progress_of_epoch']
+    )# instantiate(cfg.ray.reporter)
+    scheduler = instantiate(cfg.ray.scheduler)
 
     # execute run
     result = tune.run(
@@ -65,7 +68,10 @@ def main(cfg: DictConfig):
         resources_per_trial={
                 'cpu': int(round(multiprocessing.cpu_count()/2)), 
                 'gpu': int(torch.cuda.device_count()),
-                })
+                },
+        local_dir=cfg.ray.local_dir,
+        # name=cfg.ray.name,
+        )
 
 
     best_trial = result.get_best_trial(metric ="loss", mode="min", scope="last")

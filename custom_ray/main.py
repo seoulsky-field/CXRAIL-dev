@@ -41,6 +41,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def main(cfg: DictConfig):
     param_space = OmegaConf.to_container(instantiate(cfg.ray.param_space))
 
+    # get hydra config
+    hydra_config = hydra.core.hydra_config.HydraConfig.get()
+
     #set config #1: default
     # search_alg = instantiate(cfg.ray.search_alg, space=param_space)
     # scheduler = instantiate(cfg.ray.scheduler)
@@ -53,7 +56,7 @@ def main(cfg: DictConfig):
     search_alg = instantiate(cfg.ray.search_alg, space=param_space)
     reporter = CLIReporter(
         parameter_columns=['lr', 'weight_decay'],
-        metric_columns=['loss', 'val_loss', 'val_score', 'current_epoch', 'progress_of_epoch']
+        metric_columns=['loss', 'val_loss', 'val_score', 'best_val_roc_auc', 'current_epoch', 'progress_of_epoch']
     )# instantiate(cfg.ray.reporter)
     scheduler = instantiate(cfg.ray.scheduler)
 
@@ -69,21 +72,12 @@ def main(cfg: DictConfig):
                 'cpu': int(round(multiprocessing.cpu_count()/2)), 
                 'gpu': int(torch.cuda.device_count()),
                 },
-        local_dir=cfg.ray.local_dir,
+        local_dir=os.path.join(
+            hydra_config.sweep.dir,
+            hydra_config.sweep.subdir),
         # name=cfg.ray.name,
         )
 
-
-    best_trial = result.get_best_trial(metric ="loss", mode="min", scope="last")
-    print("Best trial config: {}".format(best_trial.config))
-    print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
-    print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
-
-    model = instantiate(cfg.model)
-    model = model.to(device)
-    # best_checkpoint_dir = best_trial.checkpoint.value
-    # model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
-    # model.load_state_dict(model_state)
 
 
 if __name__ == "__main__":

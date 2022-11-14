@@ -27,6 +27,7 @@ from custom_utils.custom_reporter import TrialTerminationReporter
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
+from hydra.core.hydra_config import HydraConfig
 
 from train import trainval
 
@@ -53,7 +54,7 @@ def main(cfg: DictConfig):
     # search_alg = instantiate(cfg.ray.search_alg, space=param_space)
     # reporter = instantiate(cfg.ray.reporter)
     # scheduler = instantiate(cfg.ray.scheduler)
-
+    print(HydraConfig.get().sweep.dir)
     # execute run
     result = tune.run(
         partial(trainval, hydra_cfg=cfg),
@@ -62,6 +63,8 @@ def main(cfg: DictConfig):
         scheduler = scheduler,
         search_alg = search_alg, 
         progress_reporter=reporter,
+        local_dir = HydraConfig.get().sweep.dir,
+        name = HydraConfig.get().sweep.subdir,
         resources_per_trial={
                 'cpu': int(round(multiprocessing.cpu_count()/2)), 
                 'gpu': int(torch.cuda.device_count()),
@@ -71,7 +74,7 @@ def main(cfg: DictConfig):
     best_trial = result.get_best_trial(metric ="loss", mode="min", scope="last")
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
-    print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
+    print("Best trial final validation accuracy: {}".format(best_trial.last_result["val_score"]))
 
     model = instantiate(cfg.model)
     model = model.to(device)

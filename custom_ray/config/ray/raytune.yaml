@@ -35,8 +35,8 @@ reporter:
 run_config:
         _target_: ray.air.RunConfig
         #progress_reporter: reporter
-        local_dir: "./ray_logs/"
-        name: "test_experiment"
+        local_dir: ${log_dir}
+        name: test_experiment
         verbose: 2
 
 num_samples: ${num_samples}

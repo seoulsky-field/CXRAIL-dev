@@ -1,15 +1,29 @@
+###Hydra Configs###
+hydra:
+  run: 
+    dir: ${log_dir}
+    
+  sweep:
+    dir: ${log_dir}
+    subdir: ${hydra.job.override_dirname}
+
+
 ###user modifiable configs###
 ckpt_name: 'best_saved.pth'
-epochs: 5
+epochs: 1
 #lr: 0.1
-#batch_size: 64
+batch_size: 8
 seed: 777
 num_workers: 2
 num_classes: 5
+log_dir: ./logs/${now:%Y-%m-%d_%H-%M-%S}                       ##both hydra and ray 
+                                                               ##디렉토리명 어떻게 지정할지 추후 결정
 
 
 ###ray###
-num_samples: 5
+num_samples: 2
+#exp_name: ${hydra.job.num}                                     #experiment name
+ 
 
 
 ###defaults###

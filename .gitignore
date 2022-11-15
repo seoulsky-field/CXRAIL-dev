@@ -113,3 +113,6 @@ __MACOSX/
 
 # hydra output directory
 outputs/
+
+# Ray output directory
+ray_logs/

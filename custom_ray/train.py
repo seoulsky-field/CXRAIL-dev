@@ -16,6 +16,7 @@ from ray import tune
 from custom_utils.custom_metrics import *
 from custom_utils.custom_reporter import *
 from custom_utils.transform import *
+from custom_utils.utils import param_override
 from data_loader.dataset_CheXpert import *
 
 best_val_roc_auc = 0
@@ -40,14 +41,15 @@ def train(dataloader, val_loader, model, loss_f, optimizer, cfg, epoch):
             loss, current = loss.item(), batch * len(data_X)
             val_loss, val_roc_auc, val_pred, val_true = val(val_loader, model, loss_f)
 
-            tune.report(loss=loss, val_loss=val_loss, val_score=val_roc_auc, current_epoch=epoch+1, progress_of_epoch=f"{100*current/size:.1f} %")
+            tune.report(loss=loss, val_loss=val_loss, val_score=val_roc_auc, best_val_roc_auc=best_val_roc_auc, current_epoch=epoch+1, progress_of_epoch=f"{100*current/size:.1f} %")
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
+                tune.report(loss=loss, val_loss=val_loss, val_score=val_roc_auc, best_val_roc_auc=best_val_roc_auc, current_epoch=epoch+1, progress_of_epoch=f"{100*current/size:.1f} %")
                 torch.save(model.state_dict(), cfg.ckpt_name)
-                print("Best model saved.")
-                report_metrics(val_pred, val_true)
-            print(f"Batch ID: {batch}, loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, [{current:>5d}/{size:>5d}]")
+                # print("Best model saved.")
+                report_metrics(val_pred, val_true, print_classification_result=False)
+            # print(f"Batch ID: {batch}, loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, [{current:>5d}/{size:>5d}]")
         
         model.train()
 
@@ -87,17 +89,28 @@ def trainval(config, hydra_cfg):
     loss_f = instantiate(hydra_cfg.loss)
 
     if hydra_cfg.optimizer._target_.startswith('torch'):
-        optimizer = instantiate(hydra_cfg.optimizer, params=model.parameters(), lr = config['lr'])
+        optimizer = instantiate(
+            hydra_cfg.optimizer, 
+            params=model.parameters(), 
+            lr=param_override(hydra_cfg.optimizer['lr'], config['lr']),
+            weight_decay=param_override(hydra_cfg.optimizer['weight_decay'], config['weight_decay']),
+            )
     else:
-        optimizer = instantiate(hydra_cfg.optimizer, model=model, loss_fn=loss_f, lr = config['lr']) 
+        optimizer = instantiate(
+            hydra_cfg.optimizer, 
+            model=model, 
+            loss_fn=loss_f, 
+            lr=param_override(hydra_cfg.optimizer['lr'], config['lr']),
+            weight_decay=param_override(hydra_cfg.optimizer['weight_decay'], config['weight_decay']),
+            ) 
 
-    print (device)
+    # print (device)
     for epoch in range(hydra_cfg.epochs):
-        print(f"Epoch {epoch+1}")
+        # print(f"Epoch {epoch+1}")
         train(train_loader, val_loader, model, loss_f, optimizer, hydra_cfg, epoch)
        
-        print("---------------------------------")
-    print("Done!")
+    #     print("---------------------------------")
+    # print("Done!")
 
     
 if __name__ == "__main__":

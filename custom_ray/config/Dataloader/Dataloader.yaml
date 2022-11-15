@@ -1,13 +1,13 @@
 #### config/loader.yaml
 
 train:
-        #batch_size: ${batch_size}   ###ray로넘어감
-        num_workers: ${num_workers}
-        drop_last: True
-        shuffle: True
+  #batch_size: 128
+  num_workers: ${num_workers}
+  drop_last: True
+  shuffle: True
 
 test:
-        #batch_size: ${batch_size}
-        num_workers: ${num_workers}
-        drop_last: False
-        shuffle: False
+  #batch_size: 128
+  num_workers: ${num_workers}
+  drop_last: False
+  shuffle: False

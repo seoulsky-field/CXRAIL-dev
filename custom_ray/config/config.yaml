@@ -1,24 +1,38 @@
+#param_space:
+rotate_degree: 15
+lr: 0.0001
+batch_size: 128
+weight_decay: 0.0001 #1e-4
+
 ###user modifiable configs###
-ckpt_name: 'best_saved.pth'
+ckpt_name: "best_saved.pth"
 epochs: 5
-#lr: 0.1
-#batch_size: 64
 seed: 777
 num_workers: 2
 num_classes: 5
-
+log_dir: ./logs/${now:%Y-%m-%d_%H-%M-%S}
 
 ###ray###
 num_samples: 5
 
+###Hydra Configs###
+hydra:
+  run:
+    dir: ${log_dir}
+
+  sweep:
+    dir: ${log_dir}
+    subdir: ${hydra.job.override_dirname}
 
 ###defaults###
 defaults:
-        - _self_
-        - Dataset: CheXpert
-        - Dataloader: Dataloader 
-        - optimizer: pesg
-        - loss: AUCM
-        - model: resnet
-        - ray: raytune
+  - _self_
+  - Dataset: CheXpert
+  - Dataloader: Dataloader
+  - optimizer: pesg
+  - loss: AUCM
+  - model: resnet
+  - mode: default
+  #- mode: raytune
 
+  #- ray: raytune

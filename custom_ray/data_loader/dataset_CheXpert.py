@@ -16,7 +16,20 @@ class ChexpertDataset(Dataset):
             mode (str, optional): define which mode you are using. Defaults to 'train'.
             use_frontal (bull) : 
     """
-    def __init__(self, mode, root_path, folder_path, use_frontal, train_cols, use_enhancement, enhance_cols, enhance_time, flip_label, shuffle, seed, image_size, verbose, transforms):
+    def __init__(self, 
+                 #input
+                 mode, transforms,
+
+                #  #mode
+                #  config,
+
+                 #hydra
+                 root_path, folder_path, image_size,  #default settings
+                 shuffle, seed, verbose, #experiment settings
+                 use_frontal, use_enhancement, enhance_time, flip_label,
+                 train_cols, enhance_cols
+                 ):
+
         self.root_path = root_path
         self.folder_path = folder_path
         self.use_frontal = use_frontal

@@ -1,4 +1,6 @@
-#config/ray/raytune.yaml
+execute_mode: raytune
+
+# should set in default
 param_space:
   lr:
     _target_: ray.tune.loguniform
@@ -10,6 +12,17 @@ param_space:
       - 64
       - 128
 
+  # weight_decay:
+  #   _target_: ray.tune.loguniform
+  #   lower: 0.0001
+  #   upper: 0.1
+
+  # rotate_degree:
+  #   _target_: ray.tune.uniform
+  #   lower: 10
+  #   upper: 20
+
+# only for ray
 search_alg:
   _target_: ray.tune.search.hyperopt.HyperOptSearch
   metric: loss
@@ -40,3 +53,5 @@ run_config:
   verbose: 2
 
 num_samples: ${num_samples}
+local_dir: "./ray_logs/"
+name: "test_experiment"

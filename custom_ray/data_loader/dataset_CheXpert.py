@@ -83,7 +83,7 @@ class ChexpertDataset(Dataset):
 
         # multi-label or one-label
         if len(self.train_cols) > 1:                                                                 # multi-label
-            if verbose:
+            if verbose == 1:
                 print ('-'*30)
                 print(f'{self.mode} Dataset')
                 print ('Multi-label mode: True, Number of classes: [%d]'%len(self.train_cols))
@@ -112,7 +112,7 @@ class ChexpertDataset(Dataset):
                 else:
                     negtive_value = 0
                 self.imratio = self.value_counts_dict[1]/(self.value_counts_dict[negtive_value]+self.value_counts_dict[1])
-                if verbose:
+                if verbose == 1:
                     # print ('-'*30)
                     print('Found %s images in total, %s positive images, %s negative images'%(self._num_images, self.value_counts_dict[1], self.value_counts_dict[negtive_value]))
                     print ('%s(C): imbalance ratio is %.4f'%(self.select_cols[0], self.imratio ))
@@ -133,7 +133,7 @@ class ChexpertDataset(Dataset):
                                 imratio = 1     # no negative samples
                             
                     imratio_list.append(imratio)
-                    if verbose:
+                    if verbose == 1:
                         # print ('-'*30)
                         print('Found %s images in total, %s positive images, %s negative images'%(self._num_images, self.value_counts_dict[class_key][1], self.value_counts_dict[class_key][0]))
                         print ('%s(C%s): imbalance ratio is %.4f'%(select_col, class_key, imratio ))

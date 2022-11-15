@@ -89,7 +89,7 @@ def reports(preds, labels, train_cols):
         print("\n******************************************************")
         print(f'Classfication Reports {label_name}'.center(54))
         print("******************************************************")
-        print(classification_report(labels[:,i], preds[:,i], target_names=['negative', 'positive']))
+        print(classification_report(labels[:,i], preds[:,i], target_names=['negative', 'positive'], zero_division = 0))
         print("******************************************************")
 
 

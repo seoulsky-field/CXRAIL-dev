@@ -1,2 +1,0 @@
-loss,val_loss,val_score,current_epoch,progress_of_epoch,time_this_iter_s,done,timesteps_total,episodes_total,training_iteration,trial_id,experiment_id,date,timestamp,time_total_s,pid,hostname,node_ip,time_since_restore,timesteps_since_restore,iterations_since_restore,warmup_time
-0.3290786147117615,0.4297546847508504,0.5022924201853721,1,0.0 %,15.557067394256592,True,,,1,fab111de,7f798e88d7d94bb6925d43ebff538d9d,2022-11-10_08-03-06,1668067386,15.557067394256592,55804,a5d0e6df15a0,172.17.0.9,15.557067394256592,0,1,0.003988504409790039

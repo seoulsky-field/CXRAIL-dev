@@ -36,7 +36,7 @@ def train(dataloader, val_loader, model, loss_f, optimizer, cfg, epoch):
         loss.backward()
         optimizer.step()
 
-        if batch % 50 == 0:
+        if batch % 500 == 0:
             loss, current = loss.item(), batch * len(data_X)
             val_loss, val_roc_auc, val_pred, val_true = val(val_loader, model, loss_f)
 

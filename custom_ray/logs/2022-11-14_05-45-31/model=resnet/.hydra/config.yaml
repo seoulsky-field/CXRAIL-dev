@@ -1,0 +1,88 @@
+ckpt_name: best_saved.pth
+epochs: 1
+batch_size: 8
+seed: 777
+num_workers: 2
+num_classes: 5
+log_dir: ./logs/${now:%Y-%m-%d_%H-%M-%S}
+num_samples: 2
+Dataset:
+  root_path: /home/dataset/chexpert/
+  folder_path: CheXpert-v1.0-small/
+  use_frontal: true
+  train_cols:
+  - Cardiomegaly
+  - Edema
+  - Consolidation
+  - Atelectasis
+  - Pleural Effusion
+  use_enhancement: false
+  enhance_cols:
+  - Cardiomegaly
+  - Consolidation
+  enhance_time: 1
+  flip_label: false
+  shuffle: true
+  seed: ${seed}
+  image_size: 224
+  verbose: 1
+Dataloader:
+  train:
+    batch_size: ${batch_size}
+    num_workers: ${num_workers}
+    drop_last: true
+    shuffle: true
+  test:
+    batch_size: ${batch_size}
+    num_workers: ${num_workers}
+    drop_last: false
+    shuffle: false
+optimizer:
+  _target_: libauc.optimizers.PESG
+  margin: 1.0
+  epoch_decay: 0.002
+  weight_decay: 1.0e-05
+loss:
+  _target_: libauc.losses.AUCM_MultiLabel
+  num_classes: ${num_classes}
+model:
+  _target_: timm.create_model
+  model_name: resnet50
+  pretrained: true
+  num_classes: ${num_classes}
+ray:
+  param_space:
+    lr:
+      _target_: ray.tune.loguniform
+      lower: 0.0001
+      upper: 0.1
+    batch_size:
+      _target_: ray.tune.choice
+      categories:
+      - 64
+      - 128
+  search_alg:
+    _target_: ray.tune.search.hyperopt.HyperOptSearch
+    metric: loss
+    mode: min
+  scheduler:
+    _target_: ray.tune.schedulers.ASHAScheduler
+    metric: loss
+    mode: min
+  reporter:
+    _target_: utils.custom_reporter.TrialTerminationReporter
+    parameter_columns:
+    - lr
+    - batch_size
+    metric_columns:
+    - loss
+    - val_loss
+    - val_score
+    - current_epoch
+    - progress_of_epoch
+  run_config:
+    _target_: ray.air.RunConfig
+    local_dir: ${log_dir}
+    name: test_experiment
+    verbose: 2
+  num_samples: ${num_samples}

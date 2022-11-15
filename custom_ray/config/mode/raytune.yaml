@@ -22,7 +22,7 @@ param_space:
   #   lower: 10
   #   upper: 20
 
-# only for ray
+### Run ###
 search_alg:
   _target_: ray.tune.search.hyperopt.HyperOptSearch
   metric: loss
@@ -33,25 +33,55 @@ scheduler:
   metric: loss
   mode: min
 
-reporter:
-  _target_: custom_utils.custom_reporter.TrialTerminationReporter
-  parameter_columns:
-    - lr
-    - batch_size
-  metric_columns:
-    - loss
-    - val_loss
-    - val_score
-    - current_epoch
-    - progress_of_epoch
+# reporter:
+#   _target_: custom_utils.custom_reporter.TrialTerminationReporter
+#   parameter_columns: #param_space.keys()
+#     - lr
+#     - batch_size
+#   metric_columns:
+#     - epoch
+#     - Batch_ID
+#     - loss
+#     - val_loss
+#     - val_score
+#     - best_val_score
+#     - progress_of_epoch
+
+### Tuner ####
+tune_config:
+  _target_: ray.tune.TuneConfig
+  search_alg:
+    _target_: ray.tune.search.hyperopt.HyperOptSearch
+    metric: loss
+    mode: min
+
+  scheduler:
+    _target_: ray.tune.schedulers.ASHAScheduler
+    metric: loss
+    mode: min
+
+  num_samples: ${num_samples}
 
 run_config:
   _target_: ray.air.RunConfig
-  #progress_reporter: reporter
-  local_dir: "./ray_logs/"
-  name: "test_experiment"
+  # progress_reporter:
+  #   reporter:
+  #     _target_: custom_utils.custom_reporter.TrialTerminationReporter
+  #     parameter_columns:
+  #       - lr
+  #       - batch_size
+  #     metric_columns:
+  #       - epoch
+  #       - Batch_ID
+  #       - loss
+  #       - val_loss
+  #       - val_score
+  #       - best_val_score
+  #       - progress_of_epoch
+  local_dir: ${log_dir}
+  name: test_experiment
   verbose: 2
 
 num_samples: ${num_samples}
-local_dir: "./ray_logs/"
+local_dir: ${log_dir}
 name: "test_experiment"

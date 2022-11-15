@@ -39,34 +39,35 @@ def main(hydra_cfg: DictConfig):
     assert (hydra_cfg.mode.execute_mode == 'raytune') , "change hydra mode into raytune. default mode should be executed in train.py"
 
     param_space = OmegaConf.to_container(instantiate(hydra_cfg.mode.param_space))
-    scheduler = instantiate(hydra_cfg.mode.scheduler)
-    search_alg = instantiate(hydra_cfg.mode.search_alg, space=param_space)
- 
+
+    #reporter hydra_cfg에 넣을 시 에러(왜?)
     reporter = TrialTerminationReporter(
         parameter_columns = param_space.keys(),
         metric_columns= ['epoch', 'Batch_ID', 'loss', 'val_loss', 'val_score', 'best_val_score', 'progress_of_epoch'])
-    scheduler = instantiate(hydra_cfg.mode.scheduler)
-
+    
+    tune_config = instantiate(hydra_cfg.mode.tune_config)
+    run_config = instantiate(hydra_cfg.mode.run_config, progress_reporter= reporter)
+    
     # execute run
-    result = tune.run(
-        partial(trainval, hydra_cfg = hydra_cfg),
-        config = param_space,
-        num_samples = hydra_cfg.mode.num_samples,
-        scheduler = scheduler,
-        search_alg = search_alg, 
-        progress_reporter=reporter,
-        resources_per_trial={
-                'cpu': int(round(multiprocessing.cpu_count()/2)), 
-                'gpu': int(torch.cuda.device_count()),
-                },
-        local_dir = HydraConfig.get().sweep.dir,
-        name = HydraConfig.get().sweep.subdir)
+    tuner = tune.Tuner(
+        trainable = tune.with_resources(partial(trainval, hydra_cfg=hydra_cfg), # 그냥 hydra_cfg넣으면 에러남
+                                        {'cpu': int(round(multiprocessing.cpu_count()/2)), 
+                                        'gpu': int(torch.cuda.device_count()),}),
+        param_space = param_space,
+        tune_config = tune_config,
+        run_config = run_config
+    )
+    analysis = tuner.fit()
 
 
-    best_trial = result.get_best_trial(metric ="loss", mode="min", scope="last")
-    print("Best trial config: {}".format(best_trial.config))
-    print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
-    print("Best trial final validation accuracy: {}".format(best_trial.last_result["val_score"]))
+    # tuner 일때는 다름
+    '''
+    AttributeError: 'ResultGrid' object has no attribute 'get_best_trial'
+    '''
+    # best_trial = result.get_best_trial(metric ="loss", mode="min", scope="last")
+    # print("Best trial config: {}".format(best_trial.config))
+    # print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
+    # print("Best trial final validation accuracy: {}".format(best_trial.last_result["val_score"]))
 
     # model = instantiate(hydra_cfg.model)
     # model = model.to(device)

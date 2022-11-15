@@ -50,7 +50,6 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch):
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
-                #tune.report(loss=loss, val_loss=val_loss, val_score=val_roc_auc, best_val_roc_auc=best_val_roc_auc, current_epoch=epoch+1, progress_of_epoch=f"{100*current/size:.1f} %")
                 torch.save(model.state_dict(), hydra_cfg.ckpt_name)
                 print("Best model saved.")
                 report_metrics(val_pred, val_true, print_classification_result=False)
@@ -72,7 +71,6 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch):
            
             elif config.execute_mode == 'raytune':
                 # tune.report -> session.report (https://docs.ray.io/en/latest/_modules/ray/air/session.html#report)
-                print(f"Batch ID: {batch}, loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, [{current:>5d}/{size:>5d}]")
                 session.report(metrics = result_metrics)
                 return result_metrics
         
@@ -156,7 +154,7 @@ def main(hydra_cfg: DictConfig):
     if config.execute_mode == 'default':
         trainval(config, hydra_cfg)
     else: 
-        assert "change hydra mode into default \n ray should be executed in main.py"
+        assert "change hydra mode into default. Ray should be executed in main.py"
     
     
 if __name__ == "__main__":

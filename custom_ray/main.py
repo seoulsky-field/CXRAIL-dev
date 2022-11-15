@@ -43,8 +43,7 @@ def main(hydra_cfg: DictConfig):
     search_alg = instantiate(hydra_cfg.mode.search_alg, space=param_space)
     reporter = TrialTerminationReporter(
         parameter_columns = param_space.keys(),
-        metric_columns=['loss', 'val_loss', 'val_score', 'best_val_roc_auc', 'current_epoch', 'progress_of_epoch']
-    )
+        metric_columns= ['epoch', 'Batch_ID', 'loss', 'val_loss', 'val_score', 'best_val_score', 'progress_of_epoch'])
     scheduler = instantiate(hydra_cfg.mode.scheduler)
 
     # execute run

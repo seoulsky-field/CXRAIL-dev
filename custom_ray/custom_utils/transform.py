@@ -7,7 +7,6 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 
 def create_transforms(hydra_cfg, mode, degree=15):
-
     image_size = hydra_cfg.Dataset.image_size
 
     if mode == 'train':

@@ -54,25 +54,25 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch):
                 print("Best model saved.")
                 report_metrics(val_pred, val_true, print_classification_result=False)
 
-            result_metrics = {
-                        'epoch' : epoch+1, 
-                        'Batch_ID': batch,
-                        'loss' : loss, 
-                        'val_loss' : val_loss, 
-                        'val_score' : val_roc_auc, 
-                        'best_val_score' : best_val_roc_auc, 
-                        'progress_of_epoch' : f"{100*current/size:.1f} %"}
+                result_metrics = {
+                            'epoch' : epoch+1, 
+                            'Batch_ID': batch,
+                            'loss' : loss, 
+                            'val_loss' : val_loss, 
+                            'val_score' : val_roc_auc, 
+                            'best_val_score' : best_val_roc_auc, 
+                            'progress_of_epoch' : f"{100*current/size:.1f} %"}
 
-            if config.execute_mode == 'default':
-                # for key, value in result_metrics.items():
-                #     print(f"{key}: {round(value,3)}," , end=' ')
-                #     print(f"[{current:>5d}/{size:>5d}]")
-                print(f"Batch ID: {batch}, loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, [{current:>5d}/{size:>5d}]")
-           
-            elif config.execute_mode == 'raytune':
-                # tune.report -> session.report (https://docs.ray.io/en/latest/_modules/ray/air/session.html#report)
-                session.report(metrics = result_metrics)
-                return result_metrics
+                if config.execute_mode == 'default':
+                    # for key, value in result_metrics.items():
+                    #     print(f"{key}: {round(value,3)}," , end=' ')
+                    #     print(f"[{current:>5d}/{size:>5d}]")
+                    print(f"loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, epoch: {epoch+1}, Batch ID: {batch}[{current:>5d}/{size:>5d}]")
+            
+                elif config.execute_mode == 'raytune':
+                    # tune.report -> session.report (https://docs.ray.io/en/latest/_modules/ray/air/session.html#report)
+                    session.report(metrics = result_metrics)
+                    return result_metrics
         
         model.train()
         
@@ -111,7 +111,6 @@ def trainval(config, hydra_cfg):
                 cfg[key] = config[key]
             except:
                 cfg[key] = hydra_cfg[key]
-
 
     train_dataset = ChexpertDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
     val_dataset = ChexpertDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))

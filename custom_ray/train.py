@@ -149,12 +149,9 @@ def trainval(config, hydra_cfg):
 )
 def main(hydra_cfg: DictConfig):
     config = hydra_cfg.mode
+    assert (config.execute_mode == 'default'), "change hydra mode into default. Ray should be executed in main.py"
     
-    if config.execute_mode == 'default':
-        trainval(config, hydra_cfg)
-    else: 
-        assert "change hydra mode into default. Ray should be executed in main.py"
-    
+    trainval(config, hydra_cfg)
     
 if __name__ == "__main__":
     main()

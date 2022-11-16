@@ -39,14 +39,10 @@ def main(hydra_cfg: DictConfig):
     assert (hydra_cfg.mode.execute_mode == 'raytune') , "change hydra mode into raytune. default mode should be executed in train.py"
 
     param_space = OmegaConf.to_container(instantiate(hydra_cfg.mode.param_space))
-
-    #reporter hydra_cfg에 넣을 시 에러(왜?)
-    reporter = TrialTerminationReporter(
-        parameter_columns = param_space.keys(),
-        metric_columns= ['epoch', 'Batch_ID', 'loss', 'val_loss', 'val_score', 'best_val_score', 'progress_of_epoch'])
     
+    #reporter = instantiate(hydra_cfg.mode.reporter)
     tune_config = instantiate(hydra_cfg.mode.tune_config)
-    run_config = instantiate(hydra_cfg.mode.run_config, progress_reporter= reporter)
+    run_config = instantiate(hydra_cfg.mode.run_config)
     
     # execute run
     tuner = tune.Tuner(

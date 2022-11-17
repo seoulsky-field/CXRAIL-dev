@@ -32,7 +32,7 @@ defaults:
   - optimizer: pesg
   - loss: AUCM
   - model: resnet
-  #- mode: default
-  - mode: raytune
+  - mode: default
+  #- mode: raytune
 
   #- ray: raytune

@@ -142,16 +142,4 @@ def trainval(config, hydra_cfg):
             train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch)
 
 
-@hydra.main(
-    version_base = None, 
-    config_path='config', 
-    config_name = 'config'
-)
-def main(hydra_cfg: DictConfig):
-    config = hydra_cfg.mode
-    assert (config.execute_mode == 'default'), "change hydra mode into default. Ray should be executed in main.py"
-    
-    trainval(config, hydra_cfg)
-    
-if __name__ == "__main__":
-    main()
+

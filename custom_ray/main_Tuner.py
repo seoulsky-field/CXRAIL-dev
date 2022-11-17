@@ -30,9 +30,12 @@ from train import trainval
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def raytune(hydra_cfg):
-    assert (hydra_cfg.mode.execute_mode == 'raytune') , "change hydra mode into raytune. default mode should be executed in train.py"
+def default(hydra_cfg):
+    config = hydra_cfg.mode
+    trainval(config, hydra_cfg)
 
+
+def raytune(hydra_cfg):
     param_space = OmegaConf.to_container(instantiate(hydra_cfg.mode.param_space))
     tune_config = instantiate(hydra_cfg.mode.tune_config)
     run_config = instantiate(hydra_cfg.mode.run_config)
@@ -64,10 +67,7 @@ def raytune(hydra_cfg):
     # model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
     # model.load_state_dict(model_state)
 
-def default(hydra_cfg):
-    config = hydra_cfg.mode
-    #assert (config.execute_mode == 'default'), "change hydra mode into default. Ray should be executed in main.py"
-    trainval(config, hydra_cfg)
+
 
 @hydra.main(
     version_base = None, 
@@ -82,6 +82,7 @@ def main(hydra_cfg: DictConfig):
     elif hydra_cfg.mode.execute_mode =='raytune':
         print("mode=raytune")
         raytune(hydra_cfg)
+        
 if __name__ == "__main__":
     
     main()

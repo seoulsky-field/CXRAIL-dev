@@ -22,8 +22,7 @@ from ray.air.config import ScalingConfig
 from custom_utils.custom_metrics import *
 from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
-from data_loader.dataset_CheXpert import *
-from data_loader.dataset_MIMIC import *
+from data_loader import CXRDataset
 
 best_val_roc_auc = 0
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -53,7 +52,7 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch):
                 best_val_roc_auc = val_roc_auc
                 torch.save(model.state_dict(), hydra_cfg.ckpt_name)
                 print("Best model saved.")
-                report_metrics(val_pred, val_true, print_classification_result=False)
+                #report_metrics(val_pred, val_true, print_classification_result=False)
 
                 result_metrics = {
                             'epoch' : epoch+1, 
@@ -113,12 +112,8 @@ def trainval(config, hydra_cfg):
             except:
                 cfg[key] = hydra_cfg[key]
 
-    # 데이터셋이 바뀌면 이 부분이..
-    # train_dataset = ChexpertDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
-    # val_dataset = ChexpertDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
-
-    train_dataset = MIMICDataset('train', 'chexpert', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
-    val_dataset = MIMICDataset('valid', 'chexpert', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
+    train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
+    val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
 
     train_loader = DataLoader(train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
     val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'],  **hydra_cfg.Dataloader.test)

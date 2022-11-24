@@ -1,4 +1,6 @@
 # default settings
+dataset: "MIMIC"
+labeler: "chexpert" #"negbio"
 root_path: "/home/dataset/"
 folder_path: "2.0.0/files/p10"
 labeler_path: "/home/MIMIC_code/jieon/labeler"

@@ -1,4 +1,6 @@
 # default settings
+dataset: "CheXpert"
+labeler: None
 root_path: "/home/dataset/chexpert/"
 folder_path: "CheXpert-v1.0-small/"
 image_size: 224

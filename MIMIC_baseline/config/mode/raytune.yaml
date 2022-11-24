@@ -1,0 +1,85 @@
+execute_mode: raytune
+
+# should set in default
+param_space:
+  lr:
+    _target_: ray.tune.loguniform
+    lower: 0.0001
+    upper: 0.1
+  batch_size:
+    _target_: ray.tune.choice
+    categories:
+      - 64
+      - 128
+
+  # weight_decay:
+  #   _target_: ray.tune.loguniform
+  #   lower: 0.0001
+  #   upper: 0.1
+
+  # rotate_degree:
+  #   _target_: ray.tune.uniform
+  #   lower: 10
+  #   upper: 20
+
+
+### Run ###
+num_samples: ${num_samples}
+local_dir: ${log_dir}
+name: "test_experiment"
+
+search_alg:
+  _target_: ray.tune.search.hyperopt.HyperOptSearch
+  metric: loss
+  mode: min
+
+scheduler:
+  _target_: ray.tune.schedulers.ASHAScheduler
+  metric: loss
+  mode: min
+
+
+### Tuner ####
+tune_config:
+  _target_: ray.tune.TuneConfig
+  search_alg:
+    _target_: ray.tune.search.hyperopt.HyperOptSearch
+    metric: loss
+    mode: min
+
+  scheduler:
+    _target_: ray.tune.schedulers.ASHAScheduler
+    metric: loss
+    mode: min
+
+  num_samples: ${num_samples}
+
+run_config:
+  _target_: ray.air.RunConfig
+  progress_reporter:
+    _target_: custom_utils.custom_reporter.TrialTerminationReporter
+    parameter_columns: ${oc.dict.keys:mode.param_space}
+    metric_columns:
+      - epoch
+      - Batch_ID
+      - loss
+      - val_loss
+      - val_score
+      - best_val_score
+      - progress_of_epoch
+  local_dir: ${log_dir}
+  verbose: 2
+
+
+###both###
+# reporter:
+#   _target_: custom_utils.custom_reporter.TrialTerminationReporter
+#   parameter_columns: ${oc.dict.keys:mode.param_space}
+#   metric_columns:
+#     - epoch
+#     - Batch_ID
+#     - loss
+#     - val_loss
+#     - val_score
+#     - best_val_score
+#     - progress_of_epoch

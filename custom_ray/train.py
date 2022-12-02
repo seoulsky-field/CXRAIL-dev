@@ -1,4 +1,5 @@
 import os
+import logging
 import numpy as np
 import pandas as pd
 import torch
@@ -6,11 +7,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from libauc.metrics import auc_roc_score
+from torchmetrics.classification import MultilabelAUROC
 
 # hydra
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
+from hydra.core.hydra_config import HydraConfig
 
 ## ray
 from ray import tune
@@ -23,15 +26,20 @@ from custom_utils.custom_metrics import *
 from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
 from data_loader.dataset_CheXpert import *
+from custom_utils.print_tree import print_config_tree
+
+
+#log = logging.getLogger(__name__)
 
 best_val_roc_auc = 0
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch):
+def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc):
     config = hydra_cfg.mode
+
     size = len(dataloader.dataset)
-    global best_val_roc_auc
+    #global best_val_roc_auc
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         data_X, label_y = X.to(device), y.to(device)
@@ -50,10 +58,18 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch):
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
-                torch.save(model.state_dict(), hydra_cfg.ckpt_name)
-                print("Best model saved.")
-                report_metrics(val_pred, val_true, print_classification_result=False)
+                if config.execute_mode == 'default':
+                    torch.save(model.state_dict(), HydraConfig.get().run.dir + '/' + hydra_cfg.ckpt_name)
+                    print("Best model saved.")
+                elif config.execute_mode == 'raytune':
+                    torch.save(model.state_dict(), hydra_cfg.ckpt_name)
+                    print("Best model saved.")
 
+            report_metrics(val_pred, val_true, print_classification_result=False)
+            print(f"loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, epoch: {epoch+1}, Batch ID: {batch}[{current:>5d}/{size:>5d}]")
+
+                
+            if config.execute_mode == 'raytune':
                 result_metrics = {
                             'epoch' : epoch+1, 
                             'Batch_ID': batch,
@@ -63,18 +79,11 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch):
                             'best_val_score' : best_val_roc_auc, 
                             'progress_of_epoch' : f"{100*current/size:.1f} %"}
 
-                if config.execute_mode == 'default':
-                    # for key, value in result_metrics.items():
-                    #     print(f"{key}: {round(value,3)}," , end=' ')
-                    #     print(f"[{current:>5d}/{size:>5d}]")
-                    print(f"loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, epoch: {epoch+1}, Batch ID: {batch}[{current:>5d}/{size:>5d}]")
-            
-                elif config.execute_mode == 'raytune':
-                    # tune.report -> session.report (https://docs.ray.io/en/latest/_modules/ray/air/session.html#report)
-                    session.report(metrics = result_metrics)
-                    return result_metrics
+                # tune.report -> session.report (https://docs.ray.io/en/latest/_modules/ray/air/session.html#report)
+                session.report(metrics = result_metrics)
         
         model.train()
+    return best_val_roc_auc
         
 
 
@@ -95,13 +104,17 @@ def val(dataloader, model, loss_f):
             val_true.append(y.cpu().numpy())
         val_true = np.concatenate(val_true)
         val_pred = np.concatenate(val_pred)
-        auc_roc_scores = auc_roc_score(val_true, val_pred)
-        val_roc_auc = np.mean(auc_roc_scores)
+        val_true_tensor = torch.from_numpy(val_true)
+        val_pred_tensor = torch.from_numpy(val_pred)
+        auroc = MultilabelAUROC(num_labels=5, average="macro", thresholds=None)
+        auc_roc_scores = auroc(val_pred_tensor, val_true_tensor)
+        val_roc_auc = torch.mean(auc_roc_scores).numpy()
         val_loss /= num_batches
     return val_loss, val_roc_auc, val_pred, val_true        
 
 
-def trainval(config, hydra_cfg):
+def trainval(config, hydra_cfg, best_val_roc_auc = 0):
+    
     if hydra_cfg.mode.execute_mode == 'default':
         cfg = config
     elif hydra_cfg.mode.execute_mode == 'raytune':
@@ -139,19 +152,22 @@ def trainval(config, hydra_cfg):
             ) 
 
     for epoch in range(hydra_cfg.epochs):
-            train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch)
+        best_val_roc_auc = train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc)
 
 
-@hydra.main(
-    version_base = None, 
-    config_path='config', 
-    config_name = 'config'
-)
-def main(hydra_cfg: DictConfig):
-    config = hydra_cfg.mode
-    assert (config.execute_mode == 'default'), "change hydra mode into default. Ray should be executed in main.py"
+# @hydra.main(
+#     version_base = None, 
+#     config_path='config', 
+#     config_name = 'config'
+# )
+# def main(hydra_cfg: DictConfig):
+#     config = hydra_cfg.mode
+#     assert (config.execute_mode == 'default'), "change hydra mode into default. Ray should be executed in main.py"
+#     if hydra_cfg.get("print_config"):
+#         #log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
+#         print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
     
-    trainval(config, hydra_cfg)
+#     trainval(config, hydra_cfg)
     
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

@@ -103,7 +103,7 @@ def report_metrics(preds, labels, print_classification_result=True):
     print('===> Total accuracy = {0} <==='.format(np.mean(np.array(accuracy_list))))
 
     ### for roc curve
-    fpr, tpr, roc_auc_scores = roc_curves(preds, labels, train_cols)
+    #fpr, tpr, roc_auc_scores = roc_curves(preds, labels, train_cols)
     # plot_roc_auc(fpr, tpr, roc_auc_scores, train_cols)
 
     ### confusion matrix

@@ -6,7 +6,7 @@ image_size: 224
 # experiment settings
 shuffle: True
 seed: ${seed}
-verbose: 1
+verbose: 0
 
 # etc
 use_frontal: True

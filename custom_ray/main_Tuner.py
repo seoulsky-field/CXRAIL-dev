@@ -27,22 +27,27 @@ from hydra.core.hydra_config import HydraConfig
 # 내부모듈
 from train import trainval
 
+#WandB
+import wandb
+from ray.air.callbacks.wandb import WandbLoggerCallback
+from ray.tune.integration.wandb import (WandbTrainableMixin, wandb_mixin)
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def default(hydra_cfg):
     config = hydra_cfg.mode
-    trainval(config, hydra_cfg)
+    trainval(config, hydra_cfg, best_val_roc_auc = 0)
 
 
 def raytune(hydra_cfg):
     param_space = OmegaConf.to_container(instantiate(hydra_cfg.mode.param_space))
     tune_config = instantiate(hydra_cfg.mode.tune_config)
-    run_config = instantiate(hydra_cfg.mode.run_config)
+    run_config = instantiate(hydra_cfg.mode.run_config, callbacks=[WandbLoggerCallback(api_key=hydra_cfg.api_key, project="Wandb_ray_lrcontrol")])
     
     # execute run
     tuner = tune.Tuner(
-        trainable = tune.with_resources(partial(trainval, hydra_cfg=hydra_cfg), # 그냥 hydra_cfg넣으면 에러남
+        trainable = tune.with_resources(partial(trainval, hydra_cfg=hydra_cfg, best_val_roc_auc = 0), # 그냥 hydra_cfg넣으면 에러남
                                         {'cpu': int(round(multiprocessing.cpu_count()/2)), 
                                         'gpu': int(torch.cuda.device_count()),}),
         param_space = param_space,

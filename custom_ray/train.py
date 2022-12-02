@@ -170,4 +170,3 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
 #     trainval(config, hydra_cfg)
     
 # if __name__ == "__main__":
-#     main()

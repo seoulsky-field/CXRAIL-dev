@@ -1,0 +1,17 @@
+#config/config.yaml
+
+num_classes: 5
+root: '/home/dataset/chexpert'
+train_csv: '/home/dataset/chexpert/CheXpert-v1.0-pad224/train.csv'
+valid_csv: '/home/dataset/chexpert/CheXpert-v1.0-pad224/valid.csv'
+ckpt_name: 'best_saved.pth'
+num_workers: 1
+batch_size: 256
+epochs: 5
+scheduler: 'CosineAnnealingLR'
+learning_rate: 1e-4
+weight_decay: 1e-4
+model_name: resnet50
+pretrained: True
+tuning_iteration: 10
+random_seed: 42

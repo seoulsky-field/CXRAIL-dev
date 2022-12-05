@@ -1,0 +1,28 @@
+# default settings
+root_path: "/home/dataset/chexpert/"
+folder_path: "CheXpert-v1.0-small/"
+image_size: 224
+
+# experiment settings
+shuffle: True
+seed: ${seed}
+verbose: 0
+
+# etc
+use_frontal: True
+use_enhancement: False # upsampling
+enhance_time: 1
+flip_label: False
+
+train_cols:
+  - "Cardiomegaly"
+  - "Edema"
+  - "Consolidation"
+  - "Atelectasis"
+  - "Pleural Effusion"
+enhance_cols:
+  - "Cardiomegaly"
+  - "Consolidation"
+##### mode를 config에서 제거    <<  이걸 포함시킬 좋은 방법이 있을 것 같긴 함
+##### 제거시키기 위해: mode를 맨 앞단으로 뺌
+

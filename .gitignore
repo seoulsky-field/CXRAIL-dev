@@ -101,7 +101,7 @@ ENV/
 .mypy_cache/
 
 # input data, saved log, checkpoints
-# data/
+data/chexpert/
 input/
 saved/
 datasets/
@@ -110,3 +110,6 @@ datasets/
 .vscode/
 .idea/
 __MACOSX/
+
+# hydra output directory
+outputs/

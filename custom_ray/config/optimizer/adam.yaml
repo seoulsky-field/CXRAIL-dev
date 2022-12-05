@@ -1,0 +1,13 @@
+#config/optimizer/adam.yaml
+
+_target_: torch.optim.Adam
+
+lr: None # ${lr}
+betas: 
+        - 0.9 
+        - 0.99
+eps: 1e-8
+weight_decay: 1 # 1e-4
+
+
+###tuple 같은 경우에는 list로 넘겨주기

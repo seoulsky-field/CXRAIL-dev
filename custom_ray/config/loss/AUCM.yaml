@@ -1,4 +1,0 @@
-#config/loss/AUCM
-
-_target_: libauc.losses.AUCM_MultiLabel
-num_classes: ${num_classes}

@@ -1,7 +1,0 @@
-execute_mode: default
-
-#param_space:
-lr: ${lr}
-batch_size: ${batch_size}
-weight_decay: ${weight_decay}
-rotate_degree: ${rotate_degree}

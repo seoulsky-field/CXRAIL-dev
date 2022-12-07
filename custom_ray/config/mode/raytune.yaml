@@ -53,6 +53,6 @@ run_config:
       - val_score
       - best_val_score
       - progress_of_epoch
-  local_dir: ${log_dir}
+  local_dir: ${log_dir}/${hydra:sweep.subdir}
   verbose: 2
 

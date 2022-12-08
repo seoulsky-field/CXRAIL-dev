@@ -8,20 +8,28 @@ from PIL import Image
 import pandas as pd
 
 
-def image_augmentation(image):
-    img_aug = tfs.Compose([tfs.RandomAffine(degrees=(-15, 15), translate=(0.05, 0.05), scale=(0.95, 1.05), fill=128)]) # pytorch 3.7: fillcolor --> fill
-    image = img_aug(image)
-    return image
-
 
 class ChexpertDataset(Dataset):
     """Image generator
-        Args:krurr
+        Args:
             dir_path (str): path to .csv file contains img paths and class labels
             mode (str, optional): define which mode you are using. Defaults to 'train'.
             use_frontal (bull) : 
     """
-    def __init__(self, mode, root_path, folder_path, use_frontal, train_cols, use_enhancement, enhance_cols, enhance_time, flip_label, shuffle, seed, image_size, verbose):
+    def __init__(self, 
+                 #input
+                 mode, transforms,
+
+                #  #mode
+                #  config,
+
+                 #hydra
+                 root_path, folder_path, image_size,  #default settings
+                 shuffle, seed, verbose, #experiment settings
+                 use_frontal, use_enhancement, enhance_time, flip_label,
+                 train_cols, enhance_cols
+                 ):
+
         self.root_path = root_path
         self.folder_path = folder_path
         self.use_frontal = use_frontal
@@ -35,6 +43,7 @@ class ChexpertDataset(Dataset):
         self.image_size = image_size
         self.verbose = verbose
         self.mode = mode
+        self.transforms = transforms
 
         # Load data from csv
         if self.mode == 'train':
@@ -87,7 +96,7 @@ class ChexpertDataset(Dataset):
 
         # multi-label or one-label
         if len(self.train_cols) > 1:                                                                 # multi-label
-            if verbose:
+            if verbose == 1:
                 print ('-'*30)
                 print(f'{self.mode} Dataset')
                 print ('Multi-label mode: True, Number of classes: [%d]'%len(self.train_cols))
@@ -116,7 +125,7 @@ class ChexpertDataset(Dataset):
                 else:
                     negtive_value = 0
                 self.imratio = self.value_counts_dict[1]/(self.value_counts_dict[negtive_value]+self.value_counts_dict[1])
-                if verbose:
+                if verbose == 1:
                     # print ('-'*30)
                     print('Found %s images in total, %s positive images, %s negative images'%(self._num_images, self.value_counts_dict[1], self.value_counts_dict[negtive_value]))
                     print ('%s(C): imbalance ratio is %.4f'%(self.select_cols[0], self.imratio ))
@@ -137,7 +146,7 @@ class ChexpertDataset(Dataset):
                                 imratio = 1     # no negative samples
                             
                     imratio_list.append(imratio)
-                    if verbose:
+                    if verbose == 1:
                         # print ('-'*30)
                         print('Found %s images in total, %s positive images, %s negative images'%(self._num_images, self.value_counts_dict[class_key][1], self.value_counts_dict[class_key][0]))
                         print ('%s(C%s): imbalance ratio is %.4f'%(select_col, class_key, imratio ))
@@ -166,69 +175,15 @@ class ChexpertDataset(Dataset):
         return self._num_images
 
     def __getitem__(self, idx):
-
+        # transform -> albumentations
         image = cv2.imread(self._images_list[idx], 0)
-        image = Image.fromarray(image)
-        # if self.mode == 'train' :
-        #     if self.transforms is None:
-        #         image = self.image_augmentation(image)
-        #     else:
-        #         image = self.transforms(image)
-        if self.mode == 'train':
-            image = image_augmentation(image)
-        image = np.array(image)
-        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        
-        # resize and normalize; e.g., ToTensor()
-        image = cv2.resize(image, dsize=(self.image_size, self.image_size), interpolation=cv2.INTER_LINEAR)  
-        image = image/255.0
-        __mean__ = np.array([[[0.485, 0.456, 0.406]]])
-        __std__ =  np.array([[[0.229, 0.224, 0.225]]]) 
-        image = (image-__mean__)/__std__
-        image = image.transpose((2, 0, 1)).astype(np.float32)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        if self.transforms is not None:
+            image = self.transforms(image=image)["image"]
+                 
         if len(self.train_cols) > 1: # multi-class mode
             label = np.array(self.targets[idx]).reshape(-1).astype(np.float32)
         else:
             label = np.array(self.targets[idx]).reshape(-1).astype(np.float32)
         return image, label
-
-
-##############################
-# dataset 선언 및 data loader
-##############################
-
-# trainset = ChexpertDataset(cfg.root_path, cfg.small_dir, cfg.mode, cfg.use_frontal, cfg.train_cols,cfg. use_enhancement, 
-#                             cfg.enhance_cols, cfg.enhance_time, cfg.flip_label, cfg.shuffle, cfg.seed, cfg.image_size, cfg.verbose)
-# testset = ChexpertDataset(cfg.root_path, cfg.small_dir, 'valid', cfg.use_frontal, cfg.train_cols,cfg. use_enhancement, 
-#                             cfg.enhance_cols, cfg.enhance_time, cfg.flip_label, cfg.shuffle, cfg.seed, cfg.image_size, cfg.verbose)
-# 
-# trainloader =  torch.utils.data.DataLoader(trainset, batch_size=32, num_workers=2, drop_last=True, shuffle=True)
-# testloader =  torch.utils.data.DataLoader(testset, batch_size=32, num_workers=2, drop_last=False, shuffle=False)
-
-
-##############################
-# data plot
-##############################
-
-# import matplotlib.pyplot as plt
-
-# figure = plt.figure(figsize=(10, 10))
-# cols, rows = 3, 3
-# for i in range(1, cols * rows + 1):
-#     sample_idx = torch.randint(len(trainset), size=(1,)).item()
-#     img, label = trainset[sample_idx]
-#     figure.add_subplot(rows, cols, i)
-#     plt.title(f'Sample - {sample_idx} \n Labels - {label}')
-#     plt.axis("off")
-#     plt.imshow(img[0,:,:], cmap="gray")
-# plt.show()
-
-
-# for idx, data in enumerate(trainloader):
-#     train_data, train_labels = data
-#     print(len(train_data))
-#     print(train_data.shape)
-#     print('*********')
-#     print(len(train_labels))
-#     print(train_labels.shape)
-#     break

@@ -1,7 +1,0 @@
-_target_: libauc.optimizers.PESG
-#model: model
-#loss_fn: loss_f
-lr: ${lr}
-margin: 1.0
-epoch_decay: 2e-3
-weight_decay: 1e-5

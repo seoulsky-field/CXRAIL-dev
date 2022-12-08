@@ -1,15 +1,16 @@
 # default settings
-dataset: "CheXpert"
-labeler: None
-root_path: "/home/dataset/chexpert/"
-folder_path: "CheXpert-v1.0-small/"
-labeler_path: None
+dataset: "MIMIC"
+labeler: "chexpert" #"negbio"
+root_path: "/home/dataset/"
+folder_path: "2.0.0/files/p10"
+labeler_path: "/home/MIMIC_code/jieon/labeler"
+
 image_size: 224
 
 # experiment settings
 shuffle: True
 seed: ${seed}
-verbose: 0
+verbose: 1
 
 # etc
 use_frontal: True
@@ -26,6 +27,3 @@ train_cols:
 enhance_cols:
   - "Cardiomegaly"
   - "Consolidation"
-##### mode를 config에서 제거    <<  이걸 포함시킬 좋은 방법이 있을 것 같긴 함
-##### 제거시키기 위해: mode를 맨 앞단으로 뺌
-

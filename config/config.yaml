@@ -37,6 +37,7 @@ defaults:
   - model: densenet
   - mode: raytune
   #- mode: raytune
+  - use_conditional_train: False
 
   #- ray: raytune
 

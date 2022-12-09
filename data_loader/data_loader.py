@@ -26,7 +26,7 @@ class CXRDataset(Dataset):
                  #hydra
                  root_path, folder_path, image_size, labeler_path, #default settings
                  shuffle, seed, verbose, #experiment settings
-                 use_frontal, use_enhancement, enhance_time, flip_label, label_smoothing, smooth_mode,
+                 use_frontal, use_enhancement, enhance_time, flip_label, label_smoothing, smooth_mode, conditional_train,
                  train_cols, enhance_cols
                  ):
         self.dataset = dataset
@@ -49,6 +49,7 @@ class CXRDataset(Dataset):
         self.enhance_time = enhance_time 
         self.flip_label = flip_label
         self.label_smoothing = label_smoothing
+        self.conditional_train = conditional_train
         self.smooth_mode = smooth_mode
         self.shuffle = shuffle
         self.verbose = verbose
@@ -75,6 +76,13 @@ class CXRDataset(Dataset):
                 for times in range(self.enhance_time):
                     sampled_df_list.append(self.df[self.df[col] == 1])
             self.df = pd.concat([self.df] + sampled_df_list, axis=0)
+
+        # conditional training
+        if self.conditional_train == True:
+            if self.smooth_mode == 'pos':
+                self.df = self.df[(self.df['Enlarged Cardiomediastinum'] != 0.0) | (self.df['Lung Opacity'] != 0.0)]
+            elif self.smooth_mode == 'neg':
+                self.df = self.df[(self.df['Enlarged Cardiomediastinum'] > 0.0) | (self.df['Lung Opacity'] > 0.0)]
 
         # label smoothing
         if self.smooth_mode == 'pos':
@@ -103,7 +111,7 @@ class CXRDataset(Dataset):
             else:
                 pass
                 
-        # dataset lenght
+        # dataset length
         self._num_images = len(self.df)
 
         # 0 --> -1

@@ -25,7 +25,7 @@ from ray.air.config import ScalingConfig
 from custom_utils.custom_metrics import *
 from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
-from data_loader.dataset_CheXpert import *
+from data_loader.data_loader import *
 from custom_utils.print_tree import print_config_tree
 
 
@@ -124,12 +124,16 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
                 cfg[key] = config[key]
             except:
                 cfg[key] = hydra_cfg[key]
-
-    train_dataset = ChexpertDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
-    val_dataset = ChexpertDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
-
+    
+    train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']), conditional_train=False)
+    val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
+    
     train_loader = DataLoader(train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
     val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'],  **hydra_cfg.Dataloader.test)
+
+    if hydra_cfg.use_conditional_train == True:
+        condition_train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']), conditional_train=True)
+        condition_train_loader = DataLoader(condition_train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
 
     model = instantiate(hydra_cfg.model)
     model = model.to(device)

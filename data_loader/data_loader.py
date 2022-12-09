@@ -26,7 +26,7 @@ class CXRDataset(Dataset):
                  #hydra
                  root_path, folder_path, image_size, labeler_path, #default settings
                  shuffle, seed, verbose, #experiment settings
-                 use_frontal, use_enhancement, enhance_time, flip_label, label_smoothing, smooth_mode
+                 use_frontal, use_enhancement, enhance_time, flip_label, label_smoothing, smooth_mode,
                  train_cols, enhance_cols
                  ):
         self.dataset = dataset

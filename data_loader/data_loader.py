@@ -49,8 +49,8 @@ class CXRDataset(Dataset):
         self.enhance_time = enhance_time 
         self.flip_label = flip_label
         self.label_smoothing = label_smoothing
-        self.conditional_train = conditional_train
         self.smooth_mode = smooth_mode
+        self.conditional_train = conditional_train
         self.shuffle = shuffle
         self.verbose = verbose
         self.transforms = transforms
@@ -76,13 +76,6 @@ class CXRDataset(Dataset):
                 for times in range(self.enhance_time):
                     sampled_df_list.append(self.df[self.df[col] == 1])
             self.df = pd.concat([self.df] + sampled_df_list, axis=0)
-
-        # conditional training
-        if self.conditional_train == True:
-            if self.smooth_mode == 'pos':
-                self.df = self.df[(self.df['Enlarged Cardiomediastinum'] != 0.0) | (self.df['Lung Opacity'] != 0.0)]
-            elif self.smooth_mode == 'neg':
-                self.df = self.df[(self.df['Enlarged Cardiomediastinum'] > 0.0) | (self.df['Lung Opacity'] > 0.0)]
 
         # label smoothing
         if self.smooth_mode == 'pos':
@@ -110,6 +103,13 @@ class CXRDataset(Dataset):
                     self.df[col].replace(-1, 0, inplace=True)  
             else:
                 pass
+
+        # conditional training
+        if self.conditional_train == True:
+            if self.smooth_mode == 'pos':
+                self.df = self.df[(self.df['Enlarged Cardiomediastinum'] != 0.0) | (self.df['Lung Opacity'] != 0.0)].reset_index()
+            elif self.smooth_mode == 'neg':
+                self.df = self.df[(self.df['Enlarged Cardiomediastinum'] > 0.0) | (self.df['Lung Opacity'] > 0.0)].reset_index()
                 
         # dataset length
         self._num_images = len(self.df)

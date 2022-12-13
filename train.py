@@ -38,6 +38,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc):
     config = hydra_cfg.mode
 
+
     size = len(dataloader.dataset)
     #global best_val_roc_auc
     model.train()

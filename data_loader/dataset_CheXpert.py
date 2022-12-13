@@ -9,7 +9,7 @@ import pandas as pd
 
 
 
-class ChexpertDataset(Dataset):
+class CXRDataset(Dataset):
     """Image generator
         Args:
             dir_path (str): path to .csv file contains img paths and class labels
@@ -18,46 +18,52 @@ class ChexpertDataset(Dataset):
     """
     def __init__(self, 
                  #input
-                 mode, transforms,
-
-                #  #mode
-                #  config,
+                 mode, 
+                 dataset,
+                 labeler,
+                 transforms,
 
                  #hydra
-                 root_path, folder_path, image_size,  #default settings
+                 root_path, folder_path, image_size, labeler_path, #default settings
                  shuffle, seed, verbose, #experiment settings
                  use_frontal, use_enhancement, enhance_time, flip_label,
                  train_cols, enhance_cols
                  ):
-
+        self.dataset = dataset
+        self.mode = mode
+        self.labeler = labeler
+        # path
         self.root_path = root_path
         self.folder_path = folder_path
-        self.use_frontal = use_frontal
-        self.train_cols = train_cols
-        self.use_enhancement = use_enhancement
+        self.labeler_path = labeler_path
+
+        #columms
+        self.train_cols =train_cols
         self.enhance_cols = enhance_cols
+
+        # setting
+        self.seed = seed
+        self.image_size = image_size
+        self.use_frontal = use_frontal
+        self.use_enhancement = use_enhancement
         self.enhance_time = enhance_time 
         self.flip_label = flip_label
         self.shuffle = shuffle
-        self.seed = seed
-        self.image_size = image_size
         self.verbose = verbose
-        self.mode = mode
         self.transforms = transforms
-
-        # Load data from csv
-        if self.mode == 'train':
-            self.file = 'train.csv'
-        else:
-            self.file = 'valid.csv'
         self.dir_path = self.root_path + self.folder_path
-        self.csv_path = os.path.join(self.dir_path, self.file)
-        self.df = pd.read_csv(self.csv_path)
+        
+
+        # Choose Dataset
+        if self.dataset == 'CheXpert':
+            self.df = pd.read_csv(os.path.join(self.root_path + self.folder_path, self.mode+'.csv'))
+        elif self.dataset == 'MIMIC':
+            self.df = pd.read_csv(os.path.join(self.labeler_path, self.labeler, self.mode+'.csv')) # label이 지금은 임시 directory에 있기 labeler path를 따로 인자로 받고있는데, 나중에 수정가능 할 것 같습니다.
 
         # Use frontal
         if self.use_frontal == True:
             self.df = self.df[self.df['Frontal/Lateral'] == 'Frontal'] 
-        
+            
         # enhancement (upsampling)
         if self.use_enhancement:
             assert isinstance(self.enhance_cols, list), 'Input should be list!'
@@ -90,13 +96,13 @@ class ChexpertDataset(Dataset):
         # shuffle data
         if self.shuffle:
             data_index = list(range(self._num_images))
-            np.random.seed(seed)
+            np.random.seed(self.seed)
             np.random.shuffle(data_index)
             self.df = self.df.iloc[data_index]        
 
         # multi-label or one-label
         if len(self.train_cols) > 1:                                                                 # multi-label
-            if verbose == 1:
+            if self.verbose == 1:
                 print ('-'*30)
                 print(f'{self.mode} Dataset')
                 print ('Multi-label mode: True, Number of classes: [%d]'%len(self.train_cols))
@@ -125,7 +131,7 @@ class ChexpertDataset(Dataset):
                 else:
                     negtive_value = 0
                 self.imratio = self.value_counts_dict[1]/(self.value_counts_dict[negtive_value]+self.value_counts_dict[1])
-                if verbose == 1:
+                if self.verbose == 1:
                     # print ('-'*30)
                     print('Found %s images in total, %s positive images, %s negative images'%(self._num_images, self.value_counts_dict[1], self.value_counts_dict[negtive_value]))
                     print ('%s(C): imbalance ratio is %.4f'%(self.select_cols[0], self.imratio ))
@@ -146,7 +152,7 @@ class ChexpertDataset(Dataset):
                                 imratio = 1     # no negative samples
                             
                     imratio_list.append(imratio)
-                    if verbose == 1:
+                    if self.verbose == 1:
                         # print ('-'*30)
                         print('Found %s images in total, %s positive images, %s negative images'%(self._num_images, self.value_counts_dict[class_key][1], self.value_counts_dict[class_key][0]))
                         print ('%s(C%s): imbalance ratio is %.4f'%(select_col, class_key, imratio ))

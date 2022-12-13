@@ -1,6 +1,5 @@
 execute_mode: raytune
 
-
 param_space:
   lr:
     _target_: ray.tune.loguniform
@@ -22,7 +21,6 @@ param_space:
   #   lower: 10
   #   upper: 20
 
-
 ### Tuner ####
 tune_config:
   _target_: ray.tune.TuneConfig
@@ -38,7 +36,6 @@ tune_config:
     grace_period: 5
 
   num_samples: ${num_samples}
-  
 
 run_config:
   _target_: ray.air.RunConfig
@@ -53,6 +50,5 @@ run_config:
       - val_score
       - best_val_score
       - progress_of_epoch
-  local_dir: ${log_dir}/${hydra:sweep.subdir}
+  local_dir: ${hydra:runtime.output_dir}
   verbose: 2
-

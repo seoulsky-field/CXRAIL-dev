@@ -126,8 +126,8 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
             except:
                 cfg[key] = hydra_cfg[key]
 
-    train_dataset = ChexpertDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
-    val_dataset = ChexpertDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
+    train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
+    val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
 
     train_loader = DataLoader(train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
     val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'],  **hydra_cfg.Dataloader.test)

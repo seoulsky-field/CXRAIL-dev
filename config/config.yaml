@@ -6,11 +6,11 @@ weight_decay: 0.0001 #1e-4
 
 ###user modifiable configs###
 ckpt_name: "best_saved.pth"
-epochs: 10
+epochs: 1
 seed: 12345
 num_workers: 2
 num_classes: 5
-log_dir: ./logs/${now:%Y-%m-%d_%H-%M-%S}
+log_dir: ./logs/${now:%Y-%m-%d}_${now:%H-%M-%S}
 
 ###ray###
 num_samples: 10
@@ -23,10 +23,10 @@ hydra:
   runtime:
     cwd: .
   run:
-    dir: ${log_dir}
+    dir: ${log_dir}/runs/
 
   sweep:
-    dir: ${log_dir}
+    dir: ${log_dir}/multiruns/
     subdir: ${hydra.job.override_dirname}
 
 ###defaults###
@@ -36,12 +36,11 @@ defaults:
   - Dataloader: Dataloader
   - optimizer: adam
   - loss: Multi_Soft_Margin
-  - model: densenet
+  - model: resnet
   - mode: raytune
   #- mode: raytune
 
   #- ray: raytune
-
 
 ####experimental
 print_config: True

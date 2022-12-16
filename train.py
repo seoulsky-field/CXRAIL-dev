@@ -27,7 +27,7 @@ from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
 from data_loader.data_loader import *
 from custom_utils.print_tree import print_config_tree
-
+from conditional_train import c_trainval
 
 #log = logging.getLogger(__name__)
 
@@ -124,21 +124,25 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
                 cfg[key] = config[key]
             except:
                 cfg[key] = hydra_cfg[key]
-    
+
     train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']), conditional_train=False)
     val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
     
     train_loader = DataLoader(train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
     val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'],  **hydra_cfg.Dataloader.test)
 
+    # conditional training
     if hydra_cfg.use_conditional_train == True:
-        condition_train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']), conditional_train=True)
-        condition_train_loader = DataLoader(condition_train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
+        best_model_state = c_trainval(hydra_cfg, best_val_roc_auc = 0)
+        model = instantiate(hydra_cfg.model)                    # load best model
+        model.load_state_dict(best_model_state)
+        model.reset_classifier(num_classes=5)
+    elif hydra_cfg.use_conditional_train == False:
+        model = instantiate(hydra_cfg.model)
 
-    model = instantiate(hydra_cfg.model)
+       
     model = model.to(device)
     loss_f = instantiate(hydra_cfg.loss)
-
     if hydra_cfg.optimizer._target_.startswith('torch'):
         optimizer = instantiate(
             hydra_cfg.optimizer, 

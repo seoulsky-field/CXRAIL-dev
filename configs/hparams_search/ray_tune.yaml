@@ -1,47 +1,39 @@
-execute_mode: raytune
+#https://github1s.com/facebookresearch/hydra/blob/main/examples/patterns/multi-select/
+name: raytune
+program: main.py
 
+# should set in default
 param_space:
   lr:
     _target_: ray.tune.loguniform
-    lower: 0.00001
-    upper: 0.001
+    lower: 0.0001
+    upper: 0.1
   batch_size:
     _target_: ray.tune.choice
     categories:
-      - 32
       - 64
-
-  # weight_decay:
-  #   _target_: ray.tune.loguniform
-  #   lower: 0.0001
-  #   upper: 0.1
-
-  # rotate_degree:
-  #   _target_: ray.tune.uniform
-  #   lower: 10
-  #   upper: 20
+      - 128
 
 ### Tuner ####
 tune_config:
   _target_: ray.tune.TuneConfig
   search_alg:
     _target_: ray.tune.search.hyperopt.HyperOptSearch
-    metric: val_score
-    mode: max
+    metric: loss
+    mode: min
 
   scheduler:
     _target_: ray.tune.schedulers.ASHAScheduler
-    metric: val_score
-    mode: max
-    grace_period: 5
+    metric: loss
+    mode: min
 
-  num_samples: ${num_samples}
+  num_samples: 10
 
 run_config:
   _target_: ray.air.RunConfig
   progress_reporter:
-    _target_: ray.tune.CLIReporter
-    parameter_columns: ${oc.dict.keys:mode.param_space}
+    _target_: custom_utils.custom_reporter.CLIReporter
+    parameter_columns: ${oc.dict.keys:hparams_search.param_space}
     metric_columns:
       - epoch
       - Batch_ID

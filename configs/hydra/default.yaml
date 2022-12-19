@@ -1,0 +1,10 @@
+###Hydra Configs###
+hydra:
+  runtime:
+    cwd: .
+  run:
+    dir: ${log_dir}/runs/
+
+  sweep:
+    dir: ${log_dir}/multiruns/
+    subdir: ${hydra.job.override_dirname}

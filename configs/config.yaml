@@ -17,7 +17,6 @@ num_samples: 10
 
 ###WandB###
 api_key: 6f04832391d6396d423a53c7dfe4533d7ab47c31
-
 ###Hydra Configs###
 hydra:
   runtime:
@@ -28,7 +27,6 @@ hydra:
   sweep:
     dir: ${log_dir}/multiruns/
     subdir: ${hydra.job.override_dirname}
-
 ###defaults###
 defaults:
   - _self_
@@ -37,10 +35,9 @@ defaults:
   - optimizer: adam
   - loss: Multi_Soft_Margin
   - model: resnet
-  - mode: raytune
-  #- mode: raytune
-
-  #- ray: raytune
+  - hparams_search: optuna
+  # - override hydra/sweeper: optuna
+  #- hydra: default.yaml
 
 ####experimental
 print_config: True

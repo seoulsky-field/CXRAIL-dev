@@ -26,7 +26,7 @@ class CXRDataset(Dataset):
                  #hydra
                  root_path, folder_path, image_size, labeler_path, #default settings
                  shuffle, seed, verbose, #experiment settings
-                 use_frontal, use_enhancement, enhance_time, flip_label,
+                 use_frontal, use_enhancement, enhance_time, flip_label, train_size,
                  train_cols, enhance_cols
                  ):
         self.dataset = dataset
@@ -52,6 +52,7 @@ class CXRDataset(Dataset):
         self.verbose = verbose
         self.transforms = transforms
         self.dir_path = self.root_path + self.folder_path
+        self.train_size=train_size
         
 
         # Choose Dataset
@@ -59,6 +60,20 @@ class CXRDataset(Dataset):
             self.df = pd.read_csv(os.path.join(self.root_path + self.folder_path, self.mode+'.csv'))
         elif self.dataset == 'MIMIC':
             self.df = pd.read_csv(os.path.join(self.labeler_path, self.labeler, self.mode+'.csv')) # label이 지금은 임시 directory에 있기 labeler path를 따로 인자로 받고있는데, 나중에 수정가능 할 것 같습니다.
+
+        # Limit train data size
+        if self.mode == 'train':
+            if self.train_size is None:
+                print(f'What you give is [{self.train_size}], type [{type(self.train_size)}]')
+                pass
+            elif type(self.train_size) == int:
+                assert self.train_size >= 1 and self.train_size <= len(self.df), f'Integer [{self.train_size}] is out of range. For your train set, it must be in the range of 1 <= x <= {len(self.df)}'
+                self.df = self.df.sample(n=self.train_size, replace=False, random_state=self.seed)
+            elif type(self.train_size) == float:
+                assert self.train_size > 0 and self.train_size <= 1, f'Float [{self.train_size}] is out of range. For your train set, it must be in the range of 0 < x <= 1'
+                self.df = self.df.sample(frac=self.train_size, replace=False, random_state=self.seed)
+            else:
+                raise ValueError(f'Type [{type(self.train_size)}] is not an expected type for training data size')
 
         # Use frontal
         if self.use_frontal == True:

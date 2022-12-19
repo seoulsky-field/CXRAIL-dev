@@ -16,6 +16,7 @@ use_frontal: True
 use_enhancement: False # upsampling
 enhance_time: 1
 flip_label: False
+train_size: null
 
 train_cols:
   - "Cardiomegaly"

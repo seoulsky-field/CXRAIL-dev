@@ -45,11 +45,13 @@ def raytune(hydra_cfg):
     print('working dir: ' + os.getcwd())
     param_space = OmegaConf.to_container(instantiate(hydra_cfg.mode.param_space))
     tune_config = instantiate(hydra_cfg.mode.tune_config)
-    run_config = instantiate(hydra_cfg.mode.run_config, callbacks=[WandbLoggerCallback(api_key=hydra_cfg.api_key, project="Wandb_ray_lrcontrol")])
+    run_config = instantiate(hydra_cfg.mode.run_config)
+    wandb_setup = OmegaConf.to_container(hydra_cfg.logging.setup, resolve=True)
+
     
     # execute run
     tuner = tune.Tuner(
-        trainable = tune.with_resources(partial(trainval, hydra_cfg=hydra_cfg, best_val_roc_auc = 0), # 그냥 hydra_cfg넣으면 에러남
+        trainable = tune.with_resources(partial(trainval, hydra_cfg=hydra_cfg, wandb_setup = wandb_setup, best_val_roc_auc = 0), # 그냥 hydra_cfg넣으면 에러남
                                         {'cpu': int(round(multiprocessing.cpu_count()/2)), 
                                         'gpu': int(torch.cuda.device_count()),}),
         param_space = param_space,

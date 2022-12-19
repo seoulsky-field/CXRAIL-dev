@@ -2,6 +2,7 @@ import os
 import logging
 import numpy as np
 import pandas as pd
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -28,11 +29,28 @@ from custom_utils.transform import create_transforms
 from data_loader.dataset_CheXpert import *
 from custom_utils.print_tree import print_config_tree
 
+#wandb
+import wandb
+import pprint
+
+
+#Seed
+def seed_everything(seed: int = 42):
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
+    print(f"SUCCESS {seed} SEED FIXING")
 
 #log = logging.getLogger(__name__)
 
-best_val_roc_auc = 0
+#best_val_roc_auc = 0
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
 
 
 def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc):
@@ -67,6 +85,7 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, be
                     print("Best model saved.")
 
             report_metrics(val_pred, val_true, print_classification_result=False)
+            wandb.log({'val_loss': val_loss, 'val_roc_auc': val_roc_auc, 'best_val_score': best_val_roc_auc, 'epoch': epoch+1, 'Batch_ID': batch})
             print(f"loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, epoch: {epoch+1}, Batch ID: {batch}[{current:>5d}/{size:>5d}]")
 
                 
@@ -114,6 +133,7 @@ def val(dataloader, model, loss_f):
     return val_loss, val_roc_auc, val_pred, val_true        
 
 
+#def trainval(config, hydra_cfg, wandb_setup, best_val_roc_auc = 0):
 def trainval(config, hydra_cfg, best_val_roc_auc = 0):
     
     if hydra_cfg.mode.execute_mode == 'default':
@@ -126,48 +146,57 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
             except:
                 cfg[key] = hydra_cfg[key]
 
-    train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
-    val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
+    wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    #wandb_setup = OmegaConf.to_container(hydra_cfg.logging.setup, resolve=True)
+    # pprint.pprint(wandb_cfg)
+    with wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg) as run:
+    #with wandb.init(**wandb_setup, config = wandb_cfg) as run:
 
-    train_loader = DataLoader(train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
-    val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'],  **hydra_cfg.Dataloader.test)
+        train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
+        val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
 
-    model = instantiate(hydra_cfg.model)
-    model = model.to(device)
-    loss_f = instantiate(hydra_cfg.loss)
+        train_loader = DataLoader(train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
+        val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'],  **hydra_cfg.Dataloader.test)
 
-    if hydra_cfg.optimizer._target_.startswith('torch'):
-        optimizer = instantiate(
-            hydra_cfg.optimizer, 
-            params = model.parameters(), 
-            lr =  cfg['lr'],
-            weight_decay = cfg['weight_decay'] ,
-            )
-    else:
-        optimizer = instantiate(
-            hydra_cfg.optimizer, 
-            model = model, 
-            loss_fn = loss_f, 
-            lr = cfg['lr'],
-            weight_decay = cfg['weight_decay'],
-            ) 
+        model = instantiate(hydra_cfg.model)
+        model = model.to(device)
+        loss_f = instantiate(hydra_cfg.loss)
 
-    for epoch in range(hydra_cfg.epochs):
-        best_val_roc_auc = train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc)
+        if hydra_cfg.optimizer._target_.startswith('torch'):
+            optimizer = instantiate(
+                hydra_cfg.optimizer, 
+                params = model.parameters(), 
+                lr =  cfg['lr'],
+                weight_decay = cfg['weight_decay'] ,
+                )
+        else:
+            optimizer = instantiate(
+                hydra_cfg.optimizer, 
+                model = model, 
+                loss_fn = loss_f, 
+                lr = cfg['lr'],
+                weight_decay = cfg['weight_decay'],
+                ) 
+
+        for epoch in range(hydra_cfg.epochs):
+            best_val_roc_auc = train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc)
 
 
-# @hydra.main(
-#     version_base = None, 
-#     config_path='config', 
-#     config_name = 'config'
-# )
-# def main(hydra_cfg: DictConfig):
-#     config = hydra_cfg.mode
-#     assert (config.execute_mode == 'default'), "change hydra mode into default. Ray should be executed in main.py"
-#     if hydra_cfg.get("print_config"):
-#         #log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
-#         print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
+@hydra.main(
+    version_base = None, 
+    config_path='config', 
+    config_name = 'config'
+)
+def main(hydra_cfg: DictConfig):
+
+    config = hydra_cfg.mode
+    seed_everything(hydra_cfg.seed)
+    assert (config.execute_mode == 'default'), "change hydra mode into default. Ray should be executed in main.py"
+    if hydra_cfg.get("print_config"):
+        #log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
+        print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
     
-#     trainval(config, hydra_cfg)
+    trainval(config, hydra_cfg)
     
-# if __name__ == "__main__":
+if __name__ == "__main__":
+    main()

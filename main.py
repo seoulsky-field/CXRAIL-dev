@@ -39,6 +39,11 @@ from train import trainval
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 working_dir = os.getcwd()
 
+import wandb
+
+
+
+
 def optuna_sweep(trial:optuna.trial.Trial, hydra_cfg):
     # print("start optuna sweep function")
     # hydra_cfg.hparams_search.params.get('trial', trial)
@@ -50,20 +55,34 @@ def optuna_sweep(trial:optuna.trial.Trial, hydra_cfg):
             'weight_decay': trial.suggest_float('weight_decay', 0.00001, 0.1),
             'rotate_degree':trial.suggest_loguniform('rotate_degree', 0.1, 15),
             'batch_size': trial.suggest_categorical('batch_size',[64, 128])}
+    # 
+    # print(config)
+    #user = "jieon"
+    project = "optuna_wandb_test"
+    display_name = "experiment-2022-12-20"
+    wandb.init(project=project, name=display_name)
+
+    result_metrics, best_val_roc_auc, epoch = trainval(config, hydra_cfg, best_val_roc_auc = 0)
+    #print("RESLT_METRICS: ", result_metrics)
+    loss = result_metrics['loss']
     print('-'*100)
-    print(config)
-    result_metrics, epoch = trainval(config, hydra_cfg, best_val_roc_auc = 0)
-    print("RESLT_METRICS: ", result_metrics)
-    trial.report(result_metrics, epoch)
+    print('loss: ',loss)
+    print(type(loss))
+    trial.report(value=loss, step=epoch)
+    wandb.log(result_metrics,  step=epoch)
 
     # Handle pruning based on the intermediate value.
     if trial.should_prune():
         raise optuna.exceptions.TrialPruned()
 
 def ray_tune(config, hydra_cfg):
-    result_metrics, epoch = trainval(config, hydra_cfg, best_val_roc_auc = 0)
-    session.report(result_metrics, epoch)
+    project = "optuna_wandb_test"
+    display_name = "experiment-2022-12-20"
+    wandb.init(project=project, name=display_name)
 
+    result_metrics,_, epoch = trainval(config, hydra_cfg, best_val_roc_auc = 0)
+    session.report(result_metrics)
+    wandb.log(result_metrics, step=epoch)
 
 # def wandb_sweep(hydra_cfg):
 #     run = wandb.init(project="CXRAIL")
@@ -83,7 +102,6 @@ def ray_tune(config, hydra_cfg):
     config_name = 'config.yaml'
 )
 def main(hydra_cfg:DictConfig):
-    print('working dir: ' + os.getcwd())
 
     # search
     if hydra_cfg.get('hparams_search', None):
@@ -112,7 +130,7 @@ def main(hydra_cfg:DictConfig):
         elif name == 'raytune':
             param_space = OmegaConf.to_container(instantiate(hydra_cfg.hparams_search.param_space))
             tune_config = instantiate(hydra_cfg.hparams_search.tune_config)
-            run_config = instantiate(hydra_cfg.hparams_search.run_config, callbacks=[WandbLoggerCallback(api_key=hydra_cfg.api_key, project="Wandb_ray_lrcontrol")])
+            run_config = instantiate(hydra_cfg.hparams_search.run_config)#, callbacks=[WandbLoggerCallback(api_key=hydra_cfg.api_key, project="Wandb_ray_lrcontrol")])
             
             # execute run
             tuner = tune.Tuner(
@@ -132,7 +150,8 @@ def main(hydra_cfg:DictConfig):
     else:
         print('default')
         config = hydra_cfg
-        trainval(config, hydra_cfg, best_val_roc_auc = 0)
+        result_metrics, epoch = trainval(config, hydra_cfg, best_val_roc_auc = 0)
+        wandb.log(result_metrics, step=epoch)
 
     os.chdir(working_dir)
 

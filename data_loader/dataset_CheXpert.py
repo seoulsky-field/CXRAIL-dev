@@ -58,8 +58,7 @@ class CXRDataset(Dataset):
         if self.dataset == 'CheXpert':
             self.df = pd.read_csv(os.path.join(self.root_path + self.folder_path, self.mode+'.csv'))
         elif self.dataset == 'MIMIC':
-            self.df = pd.read_csv(os.path.join(self.labeler_path, self.labeler, self.mode+'.csv')) # label이 지금은 임시 directory에 있기 labeler path를 따로 인자로 받고있는데, 나중에 수정가능 할 것 같습니다.
-
+            self.df = pd.read_csv(os.path.join(self.labeler_path, self.labeler, self.mode+'.csv')) 
         # Use frontal
         if self.use_frontal == True:
             self.df = self.df[self.df['Frontal/Lateral'] == 'Frontal'] 

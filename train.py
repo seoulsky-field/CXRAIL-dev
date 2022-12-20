@@ -75,7 +75,7 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, be
 
         
         model.train()
-    return best_val_roc_auc, result_metrics
+    return result_metrics, best_val_roc_auc
         
 
 
@@ -141,6 +141,6 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
 
     for epoch in range(hydra_cfg.epochs):
         result_metrics, best_val_roc_auc  = train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc)
-
-        return result_metrics, epoch
+        print(result_metrics)
+        return result_metrics, best_val_roc_auc, epoch
 

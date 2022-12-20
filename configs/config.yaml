@@ -6,7 +6,7 @@ weight_decay: 0.0001 #1e-4
 
 ###user modifiable configs###
 ckpt_name: "best_saved.pth"
-epochs: 1
+epochs: 10
 seed: 12345
 num_workers: 2
 num_classes: 5
@@ -16,7 +16,7 @@ log_dir: ./logs/${now:%Y-%m-%d}_${now:%H-%M-%S}
 num_samples: 10
 
 ###WandB###
-api_key: 6f04832391d6396d423a53c7dfe4533d7ab47c31
+#api_key: 6f04832391d6396d423a53c7dfe4533d7ab47c31
 ###Hydra Configs###
 hydra:
   runtime:
@@ -35,7 +35,7 @@ defaults:
   - optimizer: adam
   - loss: Multi_Soft_Margin
   - model: resnet
-  - hparams_search: optuna
+  - hparams_search: optuna_sweep
   # - override hydra/sweeper: optuna
   #- hydra: default.yaml
 

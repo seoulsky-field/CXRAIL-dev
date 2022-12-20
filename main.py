@@ -29,8 +29,8 @@ from train import trainval
 
 #WandB
 import wandb
-from ray.air.callbacks.wandb import WandbLoggerCallback
-from ray.tune.integration.wandb import (WandbTrainableMixin, wandb_mixin)
+from ray.air.integrations.wandb import WandbLoggerCallback, setup_wandb
+#from ray.tune.integration.wandb import (WandbTrainableMixin, wandb_mixin)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 working_dir = os.getcwd()
@@ -46,12 +46,12 @@ def raytune(hydra_cfg):
     param_space = OmegaConf.to_container(instantiate(hydra_cfg.mode.param_space))
     tune_config = instantiate(hydra_cfg.mode.tune_config)
     run_config = instantiate(hydra_cfg.mode.run_config)
-    wandb_setup = OmegaConf.to_container(hydra_cfg.logging.setup, resolve=True)
-
+    # wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    # wandb_setup = setup_wandb(wandb_cfg)
     
     # execute run
     tuner = tune.Tuner(
-        trainable = tune.with_resources(partial(trainval, hydra_cfg=hydra_cfg, wandb_setup = wandb_setup, best_val_roc_auc = 0), # 그냥 hydra_cfg넣으면 에러남
+        trainable = tune.with_resources(partial(trainval, hydra_cfg=hydra_cfg, best_val_roc_auc = 0), # 그냥 hydra_cfg넣으면 에러남
                                         {'cpu': int(round(multiprocessing.cpu_count()/2)), 
                                         'gpu': int(torch.cuda.device_count()),}),
         param_space = param_space,

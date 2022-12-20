@@ -1,5 +1,5 @@
 setup:
-  project: hydra_wandb_exp
+  project: ynkng_ray_tests
   name:  ${now:%Y-%m-%d_%H-%M-%S}
   entity: snuh_interns
   mode: online

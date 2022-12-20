@@ -85,9 +85,10 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, be
                     print("Best model saved.")
 
             report_metrics(val_pred, val_true, print_classification_result=False)
-            wandb.log({'val_loss': val_loss, 'val_roc_auc': val_roc_auc, 'best_val_score': best_val_roc_auc, 'epoch': epoch+1, 'Batch_ID': batch})
             print(f"loss: {loss:>7f}, val_loss = {val_loss:>7f}, val_roc_auc: {val_roc_auc:>4f}, Best_val_score: {best_val_roc_auc:>4f}, epoch: {epoch+1}, Batch ID: {batch}[{current:>5d}/{size:>5d}]")
 
+            if config.execute_mode == 'default':
+                wandb.log({'val_loss': val_loss, 'val_roc_auc': val_roc_auc, 'best_val_score': best_val_roc_auc, 'epoch': epoch+1, 'Batch_ID': batch})
                 
             if config.execute_mode == 'raytune':
                 result_metrics = {
@@ -135,9 +136,11 @@ def val(dataloader, model, loss_f):
 
 #def trainval(config, hydra_cfg, wandb_setup, best_val_roc_auc = 0):
 def trainval(config, hydra_cfg, best_val_roc_auc = 0):
-    
+
+    wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
     if hydra_cfg.mode.execute_mode == 'default':
         cfg = config
+        wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
     elif hydra_cfg.mode.execute_mode == 'raytune':
         cfg = {'batch_size':None, 'rotate_degree':None, 'lr':None, 'weight_decay':None}
         for key in cfg.keys():
@@ -146,41 +149,43 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
             except:
                 cfg[key] = hydra_cfg[key]
 
-    wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    
     #wandb_setup = OmegaConf.to_container(hydra_cfg.logging.setup, resolve=True)
     # pprint.pprint(wandb_cfg)
-    with wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg) as run:
+    #wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
     #with wandb.init(**wandb_setup, config = wandb_cfg) as run:
 
-        train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
-        val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
+    train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']))
+    val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
 
-        train_loader = DataLoader(train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
-        val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'],  **hydra_cfg.Dataloader.test)
+    train_loader = DataLoader(train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
+    val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'],  **hydra_cfg.Dataloader.test)
 
-        model = instantiate(hydra_cfg.model)
-        model = model.to(device)
-        loss_f = instantiate(hydra_cfg.loss)
+    model = instantiate(hydra_cfg.model)
+    model = model.to(device)
+    loss_f = instantiate(hydra_cfg.loss)
 
-        if hydra_cfg.optimizer._target_.startswith('torch'):
-            optimizer = instantiate(
-                hydra_cfg.optimizer, 
-                params = model.parameters(), 
-                lr =  cfg['lr'],
-                weight_decay = cfg['weight_decay'] ,
-                )
-        else:
-            optimizer = instantiate(
-                hydra_cfg.optimizer, 
-                model = model, 
-                loss_fn = loss_f, 
-                lr = cfg['lr'],
-                weight_decay = cfg['weight_decay'],
-                ) 
+    if hydra_cfg.optimizer._target_.startswith('torch'):
+        optimizer = instantiate(
+            hydra_cfg.optimizer, 
+            params = model.parameters(), 
+            lr =  cfg['lr'],
+            weight_decay = cfg['weight_decay'] ,
+            )
+    else:
+        optimizer = instantiate(
+            hydra_cfg.optimizer, 
+            model = model, 
+            loss_fn = loss_f, 
+            lr = cfg['lr'],
+            weight_decay = cfg['weight_decay'],
+            ) 
 
-        for epoch in range(hydra_cfg.epochs):
-            best_val_roc_auc = train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc)
+    for epoch in range(hydra_cfg.epochs):
+        best_val_roc_auc = train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc)
 
+    if hydra_cfg.mode.execute_mode == 'default':
+        wandb.finish()
 
 @hydra.main(
     version_base = None, 

@@ -35,12 +35,11 @@ defaults:
   - optimizer: adam
   - loss: Multi_Soft_Margin
   - model: densenet
-  # - mode: default
-  - mode: raytune
-  - use_conditional_train: False
+  - mode: default
+  # - mode: raytune
+  - conditional_train: default  # 'default' or 'none'
 
   #- ray: raytune
-
 
 ####experimental
 print_config: True

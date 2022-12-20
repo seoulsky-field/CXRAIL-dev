@@ -25,7 +25,7 @@ from ray.air.config import ScalingConfig
 from custom_utils.custom_metrics import *
 from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
-from data_loader.data_loader import *
+from data_loader.data_loader import CXRDataset
 from custom_utils.print_tree import print_config_tree
 from conditional_train import c_trainval
 
@@ -126,19 +126,19 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
                 cfg[key] = hydra_cfg[key]
 
     train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', cfg['rotate_degree']), conditional_train=False)
-    val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']))
+    val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid', cfg['rotate_degree']), conditional_train=False)
     
     train_loader = DataLoader(train_dataset, batch_size=cfg['batch_size'], **hydra_cfg.Dataloader.train)
     val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'],  **hydra_cfg.Dataloader.test)
 
     # conditional training
-    if hydra_cfg.use_conditional_train == True:
+    if hydra_cfg.conditional_train.execute_mode == 'none':
+        model = instantiate(hydra_cfg.model)
+    elif hydra_cfg.conditional_train.execute_mode == 'default':
         best_model_state = c_trainval(hydra_cfg, best_val_roc_auc = 0)
         model = instantiate(hydra_cfg.model)                    # load best model
         model.load_state_dict(best_model_state)
         model.reset_classifier(num_classes=5)
-    elif hydra_cfg.use_conditional_train == False:
-        model = instantiate(hydra_cfg.model)
 
        
     model = model.to(device)

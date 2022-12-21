@@ -29,16 +29,20 @@ from ray.air.config import ScalingConfig
 from custom_utils.custom_metrics import *
 from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
-from data_loader.dataset_CheXpert import *
+from data_loader.data_loader import CXRDataset
 from custom_utils.print_tree import print_config_tree
 from custom_utils.seed import seed_everything
+from custom_utils.conditional_train import c_trainval
 
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
+
+
 def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc):
+
 
     size = len(dataloader.dataset)
     model.train()
@@ -128,15 +132,23 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
     batch_size: int =config.get('batch_size', hydra_cfg['batch_size'])
 
     # set
-    train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', rotate_degree))
-    val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid',rotate_degree))
+    train_dataset = CXRDataset('train', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'train', rotate_degree), conditional_train=False)
+    val_dataset = CXRDataset('valid', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid',rotate_degree), conditional_train=False)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.train)
     val_loader = DataLoader(val_dataset, batch_size=batch_size,  **hydra_cfg.Dataloader.test)
 
-    model = instantiate(hydra_cfg.model)
+    # conditional training
+    if hydra_cfg.conditional_train.execute_mode == 'none':
+        model = instantiate(hydra_cfg.model)
+    elif hydra_cfg.conditional_train.execute_mode == 'default':
+        best_model_state = c_trainval(hydra_cfg, best_val_roc_auc = 0)
+        model = instantiate(hydra_cfg.model)                    # load best model
+        model.load_state_dict(best_model_state)
+        model.reset_classifier(num_classes=5)
+
+       
     model = model.to(device)
     loss_f = instantiate(hydra_cfg.loss)
-
     if hydra_cfg.optimizer._target_.startswith('torch'):
         optimizer = instantiate(hydra_cfg.optimizer, params=model.parameters(), lr=lr, weight_decay =weight_decay)
     else:
@@ -146,6 +158,15 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
     for epoch in range(hydra_cfg.epochs):
         best_val_roc_auc = train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc)
 
+    if hydra_cfg.mode.execute_mode == 'default':
+        wandb.finish()
+
+@hydra.main(
+    version_base = None, 
+    config_path='config', 
+    config_name = 'config'
+)
+def main(hydra_cfg: DictConfig):
 
 
 @hydra.main(

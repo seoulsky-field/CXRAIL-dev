@@ -26,7 +26,7 @@ class CXRDataset(Dataset):
                  #hydra
                  root_path, folder_path, image_size, labeler_path, #default settings
                  shuffle, seed, verbose, #experiment settings
-                 use_frontal, use_enhancement, enhance_time, flip_label, train_size,
+                 use_frontal, use_enhancement, enhance_time, flip_label, train_size, label_smoothing, smooth_mode, conditional_train,
                  train_cols, enhance_cols
                  ):
         self.dataset = dataset
@@ -48,6 +48,9 @@ class CXRDataset(Dataset):
         self.use_enhancement = use_enhancement
         self.enhance_time = enhance_time 
         self.flip_label = flip_label
+        self.label_smoothing = label_smoothing
+        self.smooth_mode = smooth_mode
+        self.conditional_train = conditional_train
         self.shuffle = shuffle
         self.verbose = verbose
         self.transforms = transforms
@@ -89,19 +92,41 @@ class CXRDataset(Dataset):
                     sampled_df_list.append(self.df[self.df[col] == 1])
             self.df = pd.concat([self.df] + sampled_df_list, axis=0)
 
+        # label smoothing
+        if self.smooth_mode == 'pos':
+            self.smooth_range = (0.55, 0.85)
+        elif self.smooth_mode == 'neg':
+            self.smooth_range = (0, 0.3)
+
         # value mapping (policy)
         for col in self.df.columns.values:
             self.df[col].fillna(0, inplace=True)
             if col in ['Edema', 'Atelectasis']:
-                self.df[col].replace(-1, 1, inplace=True)
+                if self.label_smoothing == True:
+                    self.df[col] = self.df[col].apply(lambda x : np.random.uniform(self.smooth_range[0], self.smooth_range[1]) if x == -1 else x)
+                else:
+                    self.df[col].replace(-1, 1, inplace=True)
             elif col in ['Cardiomegaly','Consolidation',  'Pleural Effusion']:
-                self.df[col].replace(-1, 0, inplace=True) 
+                if self.label_smoothing == True:
+                    self.df[col] = self.df[col].apply(lambda x : np.random.uniform(self.smooth_range[0], self.smooth_range[1]) if x == -1 else x)
+                else:
+                    self.df[col].replace(-1, 0, inplace=True) 
             elif col in ['No Finding', 'Enlarged Cardiomediastinum', 'Lung Opacity', 'Lung Lesion', 'Pneumonia', 'Pneumothorax', 'Pleural Other','Fracture','Support Devices']:
-                self.df[col].replace(-1, 0, inplace=True)  
+                if self.label_smoothing == True:
+                    self.df[col] = self.df[col].apply(lambda x : np.random.uniform(self.smooth_range[0], self.smooth_range[1]) if x == -1 else x)
+                else:
+                    self.df[col].replace(-1, 0, inplace=True)  
             else:
                 pass
+
+        # conditional training
+        if self.conditional_train == True:
+            if self.smooth_mode == 'pos':
+                self.df = self.df[(self.df['Enlarged Cardiomediastinum'] != 0.0) | (self.df['Lung Opacity'] != 0.0)].reset_index()
+            elif self.smooth_mode == 'neg':
+                self.df = self.df[(self.df['Enlarged Cardiomediastinum'] > 0.0) | (self.df['Lung Opacity'] > 0.0)].reset_index()
                 
-        # dataset lenght
+        # dataset length
         self._num_images = len(self.df)
 
         # 0 --> -1

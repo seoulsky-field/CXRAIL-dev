@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import multiprocessing
 from functools import partial
-
+import wandb
 # ray
 import ray
 from ray import air, tune
@@ -12,7 +12,7 @@ from ray.tune.schedulers import ASHAScheduler
 from hyperopt import hp
 from ray.tune.search.hyperopt import HyperOptSearch
 from ray.air import ScalingConfig
-
+from ray.air.integrations.wandb import WandbLoggerCallback, setup_wandb
 # reporter
 from ray.tune import CLIReporter
 from ray.tune.experiment import Trial
@@ -24,34 +24,36 @@ import hydra
 from omegaconf import DictConfig, OmegaConf, errors
 from hydra.utils import instantiate
 from hydra.core.hydra_config import HydraConfig
+
 # 내부모듈
 from train import trainval
+from custom_utils.print_tree import print_config_tree
+from custom_utils.seed import seed_everything
 
-#WandB
-import wandb
-from ray.air.integrations.wandb import WandbLoggerCallback, setup_wandb
-#from ray.tune.integration.wandb import (WandbTrainableMixin, wandb_mixin)
+
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 working_dir = os.getcwd()
 
 def default(hydra_cfg):
-    config = hydra_cfg.mode
+    wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
+    config = hydra_cfg
     print('working dir: ' + os.getcwd())
     trainval(config, hydra_cfg, best_val_roc_auc = 0)
+    wandb.finish()
 
 
 def raytune(hydra_cfg):
     print('working dir: ' + os.getcwd())
-    param_space = OmegaConf.to_container(instantiate(hydra_cfg.mode.param_space))
-    tune_config = instantiate(hydra_cfg.mode.tune_config)
-    run_config = instantiate(hydra_cfg.mode.run_config)
-    # wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
-    # wandb_setup = setup_wandb(wandb_cfg)
+
+    param_space = OmegaConf.to_container(instantiate(hydra_cfg.hparams_search.param_space))
+    tune_config = instantiate(hydra_cfg.hparams_search.tune_config)
+    run_config = instantiate(hydra_cfg.hparams_search.run_config)
     
     # execute run
     tuner = tune.Tuner(
-        trainable = tune.with_resources(partial(trainval, hydra_cfg=hydra_cfg, best_val_roc_auc = 0), # 그냥 hydra_cfg넣으면 에러남
+        trainable = tune.with_resources(partial(trainval, hydra_cfg=hydra_cfg, best_val_roc_auc = 0),
                                         {'cpu': int(round(multiprocessing.cpu_count()/2)), 
                                         'gpu': int(torch.cuda.device_count()),}),
         param_space = param_space,
@@ -61,20 +63,6 @@ def raytune(hydra_cfg):
     analysis = tuner.fit()
 
 
-    # tuner 일때는 다름
-    '''
-    AttributeError: 'ResultGrid' object has no attribute 'get_best_trial'
-    '''
-    # best_trial = result.get_best_trial(metric ="loss", mode="min", scope="last")
-    # print("Best trial config: {}".format(best_trial.config))
-    # print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
-    # print("Best trial final validation accuracy: {}".format(best_trial.last_result["val_score"]))
-
-    # model = instantiate(hydra_cfg.model)
-    # model = model.to(device)
-    #best_checkpoint_dir = best_trial.checkpoint.value
-    # model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
-    # model.load_state_dict(model_state)
 
 
 
@@ -84,16 +72,21 @@ def raytune(hydra_cfg):
     config_name = 'config'
 )
 def main(hydra_cfg: DictConfig):
+    seed_everything(hydra_cfg.seed)
+    if hydra_cfg.get("print_config"):
+        #log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
+        print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
     
-    if hydra_cfg.mode.execute_mode == 'default':
-        print("mode=default")
-        default(hydra_cfg)
-    
-    elif hydra_cfg.mode.execute_mode =='raytune':
-        print("mode=raytune")
+
+    # search
+    if hydra_cfg.get('hparams_search', None):
+        name = hydra_cfg.hparams_search.name
+        print("hyperparameter search:", name)
         raytune(hydra_cfg)
 
-    os.chdir(working_dir)
+    else:
+        print('default')
+        default(hydra_cfg)
 
 if __name__ == "__main__":
     

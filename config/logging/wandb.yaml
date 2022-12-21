@@ -1,18 +1,17 @@
 setup:
-  project: ynkng_ray_tests
-  name:  ${now:%Y-%m-%d_%H-%M-%S}
+  project: ${project_name}
+  name: ${now:%Y-%m-%d_%H-%M-%S}
   entity: snuh_interns
   mode: online
   dir: ${log_dir}/${hydra:sweep.subdir}
 
 config:
-  mode: ${mode.execute_mode}
+  mode: default
   batch_size: ${batch_size}
   lr: ${lr}
   model: ${model.model_name}
   optimizer: ${optimizer._target_}
   loss: ${loss._target_}
-
 # watch:
 #   log: all
 #   log_freq: 500

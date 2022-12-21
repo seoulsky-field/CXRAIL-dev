@@ -10,6 +10,8 @@ param_space:
     categories:
       - 32
       - 64
+  # wandb_setup:
+  #   project: ${logging.setup.project}
 
   # weight_decay:
   #   _target_: ray.tune.loguniform
@@ -52,3 +54,11 @@ run_config:
       - progress_of_epoch
   local_dir: ${log_dir}/${hydra:sweep.subdir}
   verbose: 2
+  callbacks: 
+      - _target_: ray.air.integrations.wandb.WandbLoggerCallback
+        api_key: ${api_key}
+        project: ${logging.setup.project}
+
+# wandb: 1 #${mode.wandb}
+
+

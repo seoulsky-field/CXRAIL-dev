@@ -6,27 +6,28 @@ weight_decay: 0.0001 #1e-4
 
 ###user modifiable configs###
 ckpt_name: "best_saved.pth"
-epochs: 1
+epochs: 3
 seed: 12345
 num_workers: 2
 num_classes: 5
-log_dir: ./logs/${now:%Y-%m-%d}_${now:%H-%M-%S}
+log_dir: ./logs/${now:%Y-%m-%d_%H-%M-%S}
 
 ###ray###
-num_samples: 10
+num_samples: 3
 
 ###WandB###
 api_key: 6f04832391d6396d423a53c7dfe4533d7ab47c31
+project_name: "wandb_ray_control"    ### subject to change
 
 ###Hydra Configs###
 hydra:
   runtime:
     cwd: .
   run:
-    dir: ${log_dir}/runs/
+    dir: ${log_dir}
 
   sweep:
-    dir: ${log_dir}/multiruns/
+    dir: ${log_dir}
     subdir: ${hydra.job.override_dirname}
 
 ###defaults###
@@ -37,10 +38,11 @@ defaults:
   - optimizer: adam
   - loss: Multi_Soft_Margin
   - model: resnet
-  - mode: raytune
+  - mode: default
+  - logging: wandb
   #- mode: raytune
 
   #- ray: raytune
 
 ####experimental
-print_config: True
+print_config: False

@@ -18,6 +18,7 @@ enhance_time: 1
 flip_label: False
 label_smoothing: False
 smooth_mode: 'pos' # or 'neg'
+train_size: null
 
 train_cols:
   - "Cardiomegaly"
@@ -28,6 +29,3 @@ train_cols:
 enhance_cols:
   - "Cardiomegaly"
   - "Consolidation"
-##### mode를 config에서 제거    <<  이걸 포함시킬 좋은 방법이 있을 것 같긴 함
-##### 제거시키기 위해: mode를 맨 앞단으로 뺌
-

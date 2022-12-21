@@ -1,6 +1,5 @@
 execute_mode: raytune
 
-
 param_space:
   lr:
     _target_: ray.tune.loguniform
@@ -11,6 +10,8 @@ param_space:
     categories:
       - 32
       - 64
+  # wandb_setup:
+  #   project: ${logging.setup.project}
 
   # weight_decay:
   #   _target_: ray.tune.loguniform
@@ -21,7 +22,6 @@ param_space:
   #   _target_: ray.tune.uniform
   #   lower: 10
   #   upper: 20
-
 
 ### Tuner ####
 tune_config:
@@ -38,7 +38,6 @@ tune_config:
     grace_period: 5
 
   num_samples: ${num_samples}
-  
 
 run_config:
   _target_: ray.air.RunConfig
@@ -55,4 +54,11 @@ run_config:
       - progress_of_epoch
   local_dir: ${log_dir}/${hydra:sweep.subdir}
   verbose: 2
+  callbacks: 
+      - _target_: ray.air.integrations.wandb.WandbLoggerCallback
+        api_key: ${api_key}
+        project: ${logging.setup.project}
+
+# wandb: 1 #${mode.wandb}
+
 

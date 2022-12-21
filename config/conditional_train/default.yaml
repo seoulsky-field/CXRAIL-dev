@@ -3,7 +3,7 @@ execute_mode: default
 #param_space:
 rotate_degree: 15
 lr: 0.0001
-batch_size: 128
+batch_size: 64
 weight_decay: 0.0001 #1
 
 epochs: 2
@@ -13,9 +13,9 @@ num_classes: 5
 
 
 model:
-  _target_: timm.create_model
-  model_name: densenet121
-  pretrained: True
+  _target_: ${model._target_}
+  model_name: ${model.model_name}
+  pretrained: ${model.pretrained}
   num_classes: ${num_classes}
 
 loss:

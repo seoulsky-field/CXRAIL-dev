@@ -19,6 +19,7 @@ enhance_time: 1
 flip_label: False
 label_smoothing: False
 smooth_mode: 'pos' # or 'neg'
+train_size: null
 
 train_cols:
   - "Cardiomegaly"

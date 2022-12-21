@@ -29,21 +29,25 @@ from train import trainval
 
 #WandB
 import wandb
-from ray.air.callbacks.wandb import WandbLoggerCallback
-from ray.tune.integration.wandb import (WandbTrainableMixin, wandb_mixin)
+from ray.air.integrations.wandb import WandbLoggerCallback, setup_wandb
+#from ray.tune.integration.wandb import (WandbTrainableMixin, wandb_mixin)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+working_dir = os.getcwd()
 
 def default(hydra_cfg):
     config = hydra_cfg.mode
+    print('working dir: ' + os.getcwd())
     trainval(config, hydra_cfg, best_val_roc_auc = 0)
 
 
 def raytune(hydra_cfg):
+    print('working dir: ' + os.getcwd())
     param_space = OmegaConf.to_container(instantiate(hydra_cfg.mode.param_space))
     tune_config = instantiate(hydra_cfg.mode.tune_config)
-    run_config = instantiate(hydra_cfg.mode.run_config, callbacks=[WandbLoggerCallback(api_key=hydra_cfg.api_key, project="Wandb_ray_lrcontrol")])
+    run_config = instantiate(hydra_cfg.mode.run_config)
+    # wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    # wandb_setup = setup_wandb(wandb_cfg)
     
     # execute run
     tuner = tune.Tuner(
@@ -80,14 +84,18 @@ def raytune(hydra_cfg):
     config_name = 'config'
 )
 def main(hydra_cfg: DictConfig):
+    
     if hydra_cfg.mode.execute_mode == 'default':
-        print("mode=defalt")
+        print("mode=default")
         default(hydra_cfg)
     
     elif hydra_cfg.mode.execute_mode =='raytune':
         print("mode=raytune")
         raytune(hydra_cfg)
-        
+
+    os.chdir(working_dir)
+
 if __name__ == "__main__":
     
     main()
+    

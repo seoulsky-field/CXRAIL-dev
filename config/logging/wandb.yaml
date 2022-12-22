@@ -12,6 +12,8 @@ config:
   model: ${model.model_name}
   optimizer: ${optimizer._target_}
   loss: ${loss._target_}
+  conditional_train: ${conditional_train.execute_mode}
+
 # watch:
 #   log: all
 #   log_freq: 500

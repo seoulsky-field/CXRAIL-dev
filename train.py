@@ -165,13 +165,6 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
     if hydra_cfg.mode.execute_mode == 'default':
         wandb.finish()
 
-@hydra.main(
-    version_base = None, 
-    config_path='config', 
-    config_name = 'config'
-)
-def main(hydra_cfg: DictConfig):
-
 
 @hydra.main(
     version_base = None, 

@@ -3,7 +3,7 @@ setup:
   name: ${now:%Y-%m-%d_%H-%M-%S}
   entity: snuh_interns
   mode: online
-  dir: ${log_dir}/${hydra:sweep.subdir}
+  dir: ${log_dir}/${hydra:job.override_dirname}
 
 config:
   mode: default

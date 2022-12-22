@@ -36,12 +36,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 working_dir = os.getcwd()
 
 def default(hydra_cfg):
-    wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
-    wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
+    #wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    #wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
     config = hydra_cfg
     print('working dir: ' + os.getcwd())
     trainval(config, hydra_cfg, best_val_roc_auc = 0)
-    wandb.finish()
+    #wandb.finish()
 
 
 def raytune(hydra_cfg):

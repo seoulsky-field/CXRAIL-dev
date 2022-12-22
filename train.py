@@ -43,8 +43,6 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc):
 
-<<<<<<< HEAD
-=======
     if hydra_cfg.get('hparams_search', None):
         hparam = 'raytune'  
     else:

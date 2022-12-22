@@ -87,6 +87,8 @@ def main(hydra_cfg: DictConfig):
     else:
         print('default')
         default(hydra_cfg)
+    
+    os.chdir(working_dir)
 
 if __name__ == "__main__":
     

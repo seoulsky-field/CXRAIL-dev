@@ -43,6 +43,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc):
 
+<<<<<<< HEAD
+=======
+    if hydra_cfg.get('hparams_search', None):
+        hparam = 'raytune'  
+    else:
+        hparam = 'default'
 
     size = len(dataloader.dataset)
     model.train()
@@ -64,11 +70,11 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, be
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
                
-                if hydra_cfg.get("hparams_search") == 'raytune':
+                if hparam == 'raytune':
                     torch.save(model.state_dict(), hydra_cfg.ckpt_name)
                     print("Best model saved.")
-                else:
-                    assert not hydra_cfg.get("hparams_search")
+                elif hparam == 'default':
+                    #assert not hydra_cfg.get("hparams_search")
                     torch.save(model.state_dict(), HydraConfig.get().run.dir + '/' + hydra_cfg.ckpt_name)
                     print("Best model saved.")
 
@@ -85,11 +91,11 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, be
                             'best_val_score' : best_val_roc_auc, 
                             }
 
-            if hydra_cfg.get("hparams_search") == 'raytune':
+            if hparam == 'raytune':
                 result_metrics['progress_of_epoch'] = f"{100*current/size:.1f} %"
                 session.report(metrics = result_metrics)
-            else:
-                assert not hydra_cfg.get("hparams_search")
+            elif hparam == 'default':
+                #assert not hydra_cfg.get("hparams_search")
                 wandb.log(result_metrics)
 
         model.train()

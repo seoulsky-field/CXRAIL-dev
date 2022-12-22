@@ -27,7 +27,7 @@ tune_config:
     metric: loss
     mode: min
 
-  num_samples: 10
+  num_samples: 3
 
 run_config:
   _target_: ray.air.RunConfig

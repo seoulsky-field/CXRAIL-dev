@@ -27,7 +27,7 @@ class CXRDataset(Dataset):
                  root_path, folder_path, image_size, labeler_path, #default settings
                  shuffle, seed, verbose, #experiment settings
                  use_frontal, use_enhancement, enhance_time, flip_label, train_size, label_smoothing, smooth_mode, conditional_train,
-                 train_cols, enhance_cols
+                 train_cols, enhance_cols, auto_augmentation,
                  ):
         self.dataset = dataset
         self.mode = mode
@@ -56,7 +56,7 @@ class CXRDataset(Dataset):
         self.transforms = transforms
         self.dir_path = self.root_path + self.folder_path
         self.train_size=train_size
-        
+        self.auto_augmentation=auto_augmentation
 
         # Choose Dataset
         if self.dataset == 'CheXpert':
@@ -226,8 +226,11 @@ class CXRDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if self.transforms is not None:
-            image = self.transforms(image=image)["image"]
-                 
+            try:
+                image = self.transforms(image=image)["image"]
+            except:
+                image = self.transforms(image) # Due to the torchvision transform format
+            
         if len(self.train_cols) > 1: # multi-class mode
             label = np.array(self.targets[idx]).reshape(-1).astype(np.float32)
         else:

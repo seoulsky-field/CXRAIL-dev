@@ -11,20 +11,21 @@ seed: 12345
 num_workers: 2
 num_classes: 5
 log_dir: ./logs/${now:%Y-%m-%d_%H-%M-%S}
+save_dir: ${log_dir}/${hydra:job.override_dirname}
 
 ###ray###
 num_samples: 3
 
 ###WandB###
 api_key: 6f04832391d6396d423a53c7dfe4533d7ab47c31
-project_name: "jieon_test" ### subject to change
+project_name: #ynkng_tests ### subject to change
 
 ###Hydra Configs###
 hydra:
   runtime:
     cwd: .
   run:
-    dir: ${log_dir}
+    dir: ${save_dir}
 
   sweep:
     dir: ${log_dir}

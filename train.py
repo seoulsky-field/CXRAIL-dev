@@ -41,8 +41,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 
-def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc):
+def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc, hparam):
 
+    # if hydra_cfg.get('hparams_search', None):
+    #     hparam = 'raytune'  
+    # else:
+    #     hparam = 'default'
 
     size = len(dataloader.dataset)
     model.train()
@@ -64,12 +68,15 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, be
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
                
-                if hydra_cfg.get("hparams_search") == 'raytune':
+                if hparam == 'raytune':
                     torch.save(model.state_dict(), hydra_cfg.ckpt_name)
                     print("Best model saved.")
-                else:
-                    assert not hydra_cfg.get("hparams_search")
-                    torch.save(model.state_dict(), HydraConfig.get().run.dir + '/' + hydra_cfg.ckpt_name)
+                elif hparam == 'default':
+                    #assert not hydra_cfg.get("hparams_search")
+                    try:
+                        torch.save(model.state_dict(), HydraConfig.get().run.dir + '/' + hydra_cfg.ckpt_name)
+                    except:
+                        torch.save(model.state_dict(), hydra_cfg.save_dir + '/' + hydra_cfg.ckpt_name)
                     print("Best model saved.")
 
 
@@ -85,11 +92,11 @@ def train(hydra_cfg, dataloader, val_loader, model, loss_f, optimizer, epoch, be
                             'best_val_score' : best_val_roc_auc, 
                             }
 
-            if hydra_cfg.get("hparams_search") == 'raytune':
+            if hparam == 'raytune':
                 result_metrics['progress_of_epoch'] = f"{100*current/size:.1f} %"
                 session.report(metrics = result_metrics)
-            else:
-                assert not hydra_cfg.get("hparams_search")
+            elif hparam == 'default':
+                #assert not hydra_cfg.get("hparams_search")
                 wandb.log(result_metrics)
 
         model.train()
@@ -125,6 +132,27 @@ def val(dataloader, model, loss_f):
 
 
 def trainval(config, hydra_cfg, best_val_roc_auc = 0):    
+    
+    if hydra_cfg.get('hparams_search', None):
+        hparam = 'raytune'  
+    else:
+        hparam = 'default'
+
+    # conditional training
+    if hydra_cfg.conditional_train.execute_mode == 'none':
+        model = instantiate(hydra_cfg.model)
+    elif hydra_cfg.conditional_train.execute_mode == 'default':
+        best_model_state = c_trainval(hydra_cfg, best_val_roc_auc = 0)
+        model = instantiate(hydra_cfg.model)                    # load best model
+        model.load_state_dict(best_model_state)
+        model.reset_classifier(num_classes=5)
+
+    # Initialize WandB
+    #wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
+    if hparam == 'default':
+        wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+        wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
+
     # search space
     lr: float =  config.get('lr', hydra_cfg['lr'])
     weight_decay: float = config.get('weight_decay',  hydra_cfg['lr'])
@@ -137,15 +165,7 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.train)
     val_loader = DataLoader(val_dataset, batch_size=batch_size,  **hydra_cfg.Dataloader.test)
 
-    # conditional training
-    if hydra_cfg.conditional_train.execute_mode == 'none':
-        model = instantiate(hydra_cfg.model)
-    elif hydra_cfg.conditional_train.execute_mode == 'default':
-        best_model_state = c_trainval(hydra_cfg, best_val_roc_auc = 0)
-        model = instantiate(hydra_cfg.model)                    # load best model
-        model.load_state_dict(best_model_state)
-        model.reset_classifier(num_classes=5)
-
+    
        
     model = model.to(device)
     loss_f = instantiate(hydra_cfg.loss)
@@ -156,17 +176,10 @@ def trainval(config, hydra_cfg, best_val_roc_auc = 0):
 
     # train
     for epoch in range(hydra_cfg.epochs):
-        best_val_roc_auc = train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc)
+        best_val_roc_auc = train(hydra_cfg, train_loader, val_loader, model, loss_f, optimizer, epoch, best_val_roc_auc, hparam)
 
-    if hydra_cfg.mode.execute_mode == 'default':
+    if hparam == 'default':
         wandb.finish()
-
-@hydra.main(
-    version_base = None, 
-    config_path='config', 
-    config_name = 'config'
-)
-def main(hydra_cfg: DictConfig):
 
 
 @hydra.main(

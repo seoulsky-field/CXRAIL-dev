@@ -225,7 +225,7 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
         train_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.train
     )
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.test
+        val_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.valid
     )
 
     model = model.to(device)

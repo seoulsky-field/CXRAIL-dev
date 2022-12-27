@@ -2,7 +2,7 @@
 dataset: "CheXpert"
 labeler: None
 root_path: "/home/dataset/chexpert/"
-folder_path: "CheXpert-v1.0-small/"
+folder_path: "CheXpert-v1.0-pad224" #CheXpert-v1.0-small/"
 labeler_path: None
 image_size: 224
 

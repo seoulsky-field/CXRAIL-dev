@@ -17,7 +17,7 @@ def create_transforms(hydra_cfg, mode, degree=15):
                 tfs.ConvertImageDtype(torch.uint8),
                 tfs.AutoAugment(tfs.AutoAugmentPolicy.IMAGENET),
                 tfs.ConvertImageDtype(torch.float32),
-                tfs.Resize((224, 224)),
+                tfs.Resize((image_size, image_size)),
                 tfs.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
                 ])
         else:

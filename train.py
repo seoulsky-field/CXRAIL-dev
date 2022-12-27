@@ -114,12 +114,12 @@ def train(
 
             report_metrics(val_pred, val_true, print_classification_result=False)
             print(
-                f"""loss: {loss:>7f},
-                val_loss = {val_loss:>7f},
-                val_roc_auc: {val_roc_auc:>4f},
-                Best_val_score: {best_val_roc_auc:>4f},
-                epoch: {epoch+1},
-                Batch ID: {batch}[{current:>5d}/{size:>5d}]"""
+                f"loss: {loss:>7f}, "
+                f"val_loss = {val_loss:>7f}, "
+                f"val_roc_auc: {val_roc_auc:>4f}, "
+                f"Best_val_score: {best_val_roc_auc:>4f}, "
+                f"epoch: {epoch+1}, "
+                f"Batch ID: {batch}[{current:>5d}/{size:>5d}]"
             )
 
             result_metrics = {

@@ -181,8 +181,7 @@ def val(dataloader, model, loss_f):
 
         auroc = MultilabelAUROC(num_labels=5, average="macro", thresholds=None)
         auc_roc_scores = auroc(val_pred_tensor, val_true_tensor)
-        val_roc_auc = torch.mean(auc_roc_scores).numpy()
-
+        val_roc_auc = float(torch.mean(auc_roc_scores))
         val_loss /= num_batches
 
     return val_loss, val_roc_auc, val_pred, val_true

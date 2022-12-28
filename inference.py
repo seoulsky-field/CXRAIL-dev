@@ -13,7 +13,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from libauc.metrics import auc_roc_score
 from torchmetrics.classification import MultilabelAUROC
-
+import yaml
 # hydra
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -39,7 +39,7 @@ from custom_utils.seed import seed_everything
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def predict(hydra_cfg, model, test_loader):#, loss_f, optimizer):
+def predict(model, test_loader):#, loss_f, optimizer):
     model.eval()
     with torch.no_grad():
         test_pred = []
@@ -66,12 +66,29 @@ def predict(hydra_cfg, model, test_loader):#, loss_f, optimizer):
         print(f"Test accuracy: {test_roc_auc:>4f}")
 
     return test_roc_auc
+
   
+def load_model(hydra_cfg, check_point_path):
+    check_point = torch.load(check_point_path)
+    model_name = check_point.get('model')
+    model_state = check_point.get('model_state_dict')
+
+    try:
+        model = instantiate(hydra_cfg.models.resnet)
+        model.load_state_dict(model_state)
+    except:
+        model = instantiate(hydra_cfg.models.densenet)
+        model.load_state_dict(model_state)
+
+    model = model.to(device)
+
+    return model, model_name
+
 
 @hydra.main(
     version_base = None, 
     config_path='config', 
-    config_name = 'config'
+    config_name = 'test.yaml'
 )  
 def main(hydra_cfg:DictConfig):
     seed_everything(hydra_cfg.seed)
@@ -79,17 +96,34 @@ def main(hydra_cfg:DictConfig):
     test_dataset = CXRDataset('test', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid'), conditional_train=False,)
     test_loader = DataLoader(test_dataset, **hydra_cfg.Dataloader.test)
 
-    model = instantiate(hydra_cfg.model)
-    model = model.to(device)
-    #check_point_path = os.path.join(HydraConfig.get().run.dir, 'best_saved.pt')
-    check_point_path = '/home/CheXpert_code/ynkng/CXRAIL-dev/logs/2022-12-27_06-10-27/Dataset.train_size=3000/trainval_2022-12-27_06-10-27/trainval_3941525e_2_batch_size=64,lr=0.0003_2022-12-27_06-11-22/best_saved.pth'
-    check_point = torch.load(check_point_path)
-    model.load_state_dict(check_point)
+    check_point_yaml = '/home/CheXpert_code/jieon/CXRAIL/CXRAIL-dev/logs/sample.yaml'
 
-    # test
-    test_roc_auc = predict(hydra_cfg, model, test_loader)
+    with open(check_point_yaml) as f:
+        check_point_paths = yaml.load(f, Loader=yaml.FullLoader)
+    
+    paths = check_point_paths.values()
+    additional_info = []
+    test_score = []
+    for check_point_path in paths:
+        model, model_name = load_model(hydra_cfg, check_point_path)
+
+        # test
+        test_roc_auc = predict(model, test_loader)
+        test_score.append(test_roc_auc)
+        additional_info.append(model_name)
+    # if hydra_cfg['analysis'] == True:
+    #     #csv 저장
+    #     return 0
+        
+    # else:
+    for score, name in zip(test_score, additional_info):
+        print(name, score)
+
+    return test_score
+
+    
 
 
 if __name__ == '__main__':
 
-    main()
+    test_score = main()

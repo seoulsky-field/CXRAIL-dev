@@ -18,7 +18,7 @@ from ray.tune import CLIReporter
 from ray.tune.experiment import Trial
 from typing import Any, Callable, Dict, List, Optional, Union
 from custom_utils.custom_reporter import TrialTerminationReporter
-
+from custom_utils.ray_analysis import RayAnalysis
 # hydra
 import hydra
 from omegaconf import DictConfig, OmegaConf, errors
@@ -62,6 +62,10 @@ def raytune(hydra_cfg):
     )
     analysis = tuner.fit()
 
+    ray_analysis = RayAnalysis(analysis)
+    best_checkpoint = ray_analysis.get_best_checkpoint()
+
+    return best_checkpoint
 
 
 
@@ -82,7 +86,8 @@ def main(hydra_cfg: DictConfig):
     if hydra_cfg.get('hparams_search', None):
         name = hydra_cfg.hparams_search.name
         print("hyperparameter search:", name)
-        raytune(hydra_cfg)
+        best_checkpoint = raytune(hydra_cfg)
+
 
     else:
         print('default')

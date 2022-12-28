@@ -16,6 +16,7 @@ from libauc.metrics import auc_roc_score
 from torchmetrics.classification import MultilabelAUROC
 
 # hydra
+import logging
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
@@ -94,20 +95,27 @@ def train(
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
+                save_dict = {
+                    'Dataset': hydra_cfg.get('Dataset')['dataset'],
+                    #'optimizer': hydra_cfg.get('optimizer')['_target_'].split('.')[-1],
+                    # 'loss': hydra_cfg.get('loss'),
+                    'model': hydra_cfg.get('model')['model_name'],
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(), 
+                }
 
                 if hparam == "raytune":
-                    torch.save(model.state_dict(), hydra_cfg.ckpt_name)
+                    torch.save(save_dict, hydra_cfg.ckpt_name)
                     print("Best model saved.")
                 elif hparam == "default":
-                    # assert not hydra_cfg.get("hparams_search")
                     try:
                         torch.save(
-                            model.state_dict(),
+                            save_dict,
                             HydraConfig.get().run.dir + "/" + hydra_cfg.ckpt_name,
                         )
                     except BaseException:
                         torch.save(
-                            model.state_dict(),
+                            save_dict,
                             hydra_cfg.save_dir + "/" + hydra_cfg.ckpt_name,
                         )
                     print("Best model saved.")

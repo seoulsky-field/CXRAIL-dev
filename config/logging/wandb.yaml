@@ -6,7 +6,7 @@ setup:
   dir: ${log_dir}/${hydra:job.override_dirname}
 
 config:
-  mode: default
+  hparams_search: ${hparams_search.name}
   batch_size: ${batch_size}
   lr: ${lr}
   model: ${model.model_name}
@@ -17,4 +17,3 @@ config:
 # watch:
 #   log: all
 #   log_freq: 500
-

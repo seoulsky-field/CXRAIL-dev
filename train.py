@@ -26,6 +26,7 @@ from ray import tune
 from ray.air import session
 from ray.air.checkpoint import Checkpoint
 from ray.air.config import ScalingConfig
+from ray.air.integrations.wandb import setup_wandb
 
 # 내부 모듈
 from custom_utils.custom_metrics import *
@@ -131,12 +132,13 @@ def train(
                 "best_val_score": best_val_roc_auc,
             }
 
+            wandb.log(result_metrics)
             if hparam == "raytune":
                 result_metrics["progress_of_epoch"] = f"{100*current/size:.1f} %"
                 session.report(metrics=result_metrics)
-            elif hparam == "default":
-                # assert not hydra_cfg.get("hparams_search")
-                wandb.log(result_metrics)
+            # elif hparam == "default":
+            #     # assert not hydra_cfg.get("hparams_search")
+            #     wandb.log(result_metrics)
 
         model.train()
 
@@ -196,17 +198,20 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
         model.load_state_dict(best_model_state)
         model.reset_classifier(num_classes=5)
 
-    # Initialize WandB
-    # wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
-    if hparam == "default":
-        wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
-        wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
-
     # search space
     lr: float = config.get("lr", hydra_cfg["lr"])
     weight_decay: float = config.get("weight_decay", hydra_cfg["lr"])
     rotate_degree: float = config.get("rotate_degree", hydra_cfg["weight_decay"])
     batch_size: int = config.get("batch_size", hydra_cfg["batch_size"])
+
+    # Initialize WandB
+    if hparam == "default":
+        wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+        wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
+    elif hparam == "raytune":
+        wandb_r = setup_wandb(  # noqa: F841
+            project=hydra_cfg.project_name, config=wandb_cfg
+        )
 
     # set
     train_dataset = CXRDataset(

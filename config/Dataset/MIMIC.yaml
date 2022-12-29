@@ -1,0 +1,29 @@
+# default settings
+dataset: "MIMIC"
+labeler: "chexpert" #"negbio"
+root_path: "/home/dataset/"
+folder_path: "2.0.0/files/p10"
+labeler_path: "/home/MIMIC_code/jieon/labeler"
+
+image_size: 224
+
+# experiment settings
+shuffle: True
+seed: ${seed}
+verbose: 1
+
+# etc
+use_frontal: True
+use_enhancement: False # upsampling
+enhance_time: 1
+flip_label: False
+
+train_cols:
+  - "Cardiomegaly"
+  - "Edema"
+  - "Consolidation"
+  - "Atelectasis"
+  - "Pleural Effusion"
+enhance_cols:
+  - "Cardiomegaly"
+  - "Consolidation"

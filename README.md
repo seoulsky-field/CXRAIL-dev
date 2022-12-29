@@ -1,42 +1,41 @@
-# PyTorch Template Project
-PyTorch deep learning project made easy.
+<p align="center">
+  <img height="100" src="assets/cxrail_logo.png" />
+</p>
+<h3 align="center">
+    <b> CXRAIL: Chest X-ray AI Library</b>
+</h3>
 
-<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+---
+> CXRAIL-dev : this repos is a dev version of CXRAIL
 
-<!-- code_chunk_output -->
+## 📚 Documentation
+To start using the CXRAIL in your research, visit the documentation sections below to learn more about its different features and use cases through step-by-step instructions and demo notebooks.
+#### [Section 1: Datasets, Accessibility and Data Processing Tools](docs/01_data_access.md)
 
-* [PyTorch Template Project](#pytorch-template-project)
-	* [Requirements](#requirements)
-	* [Features](#features)
-	* [Folder Structure](#folder-structure)
-	* [Usage](#usage)
-		* [Config file format](#config-file-format)
-		* [Using config files](#using-config-files)
-		* [Resuming from checkpoints](#resuming-from-checkpoints)
-    * [Using Multiple GPU](#using-multiple-gpu)
-	* [Customization](#customization)
-		* [Custom CLI options](#custom-cli-options)
-		* [Data Loader](#data-loader)
-		* [Trainer](#trainer)
-		* [Model](#model)
-		* [Loss](#loss)
-		* [metrics](#metrics)
-		* [Additional logging](#additional-logging)
-		* [Validation data](#validation-data)
-		* [Checkpoints](#checkpoints)
-    * [Tensorboard Visualization](#tensorboard-visualization)
-	* [Contribution](#contribution)
-	* [TODOs](#todos)
-	* [License](#license)
-	* [Acknowledgements](#acknowledgements)
 
-<!-- /code_chunk_output -->
-
+> From here, contents below are descriptions of project structure.  
+> (See https://github.com/victoresque/pytorch-template)
+* [Requirements](#requirements)
+* [Features](#features)
+* [Folder Structure](#folder-structure)
+* [Usage](#usage)
+  * [Config file format](#config-file-format)
+  * [Using config files](#using-config-files)
+  * [Resuming from checkpoints](#resuming-from-checkpoints)
+  * [Using Multiple GPU](#using-multiple-gpu)
+* [Customization](#customization)
+  * [Custom CLI options](#custom-cli-options)
+  * [Data Loader](#data-loader)
+  * [Trainer](#trainer)
+  * [Model](#model)
+  * [Loss](#loss)
+  * [metrics](#metrics)
+  * [Additional logging](#additional-logging)
+  * [Validation data](#validation-data)
+  * [Checkpoints](#checkpoints)
+  * [Tensorboard Visualization](#tensorboard-visualization)
 ## Requirements
-* Python >= 3.5 (3.6 recommended)
-* PyTorch >= 0.4 (1.2 recommended)
-* tqdm (Optional for `test.py`)
-* tensorboard >= 1.14 (see [Tensorboard Visualization](#tensorboard-visualization))
+* WIP
 
 ## Features
 * Clear folder structure which is suitable for many deep learning projects.
@@ -354,25 +353,3 @@ If you need more visualizations, use `add_scalar('tag', data)`, `add_image('tag'
 `add_something()` methods in this template are basically wrappers for those of `tensorboardX.SummaryWriter` and `torch.utils.tensorboard.SummaryWriter` modules. 
 
 **Note**: You don't have to specify current steps, since `WriterTensorboard` class defined at `logger/visualization.py` will track current steps.
-
-## Contribution
-Feel free to contribute any kind of function or enhancement, here the coding style follows PEP8
-
-Code should pass the [Flake8](http://flake8.pycqa.org/en/latest/) check before committing.
-
-## TODOs
-
-- [ ] Multiple optimizers
-- [ ] Support more tensorboard functions
-- [x] Using fixed random seed
-- [x] Support pytorch native tensorboard
-- [x] `tensorboardX` logger support
-- [x] Configurable logging layout, checkpoint naming
-- [x] Iteration-based training (instead of epoch-based)
-- [x] Adding command line option for fine-tuning
-
-## License
-This project is licensed under the MIT License. See  LICENSE for more details
-
-## Acknowledgements
-This project is inspired by the project [Tensorflow-Project-Template](https://github.com/MrGemy95/Tensorflow-Project-Template) by [Mahmoud Gemy](https://github.com/MrGemy95)

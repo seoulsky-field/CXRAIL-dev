@@ -1,0 +1,28 @@
+# default settings
+dataset: "CheXpert"
+labeler: None
+root_path: "/home/dataset/chexpert/"
+folder_path: "CheXpert-v1.0-small/"
+labeler_path: None
+image_size: 224
+
+# experiment settings
+shuffle: True
+seed: ${seed}
+verbose: 0
+
+# etc
+use_frontal: True
+use_enhancement: False # upsampling
+enhance_time: 1
+flip_label: False
+
+train_cols:
+  - "Cardiomegaly"
+  - "Edema"
+  - "Consolidation"
+  - "Atelectasis"
+  - "Pleural Effusion"
+enhance_cols:
+  - "Cardiomegaly"
+  - "Consolidation"

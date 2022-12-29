@@ -6,7 +6,7 @@ weight_decay: 0.0001    # 1e-4
 
 ###user modifiable configs###
 ckpt_name: "best_saved.pth"
-epochs: 1
+epochs: 3
 seed: 12345
 num_workers: 2
 num_classes: 5

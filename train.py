@@ -6,6 +6,7 @@ import random
 import wandb
 import pprint
 import time
+import pickle
 
 import torch
 import torch.nn as nn
@@ -57,11 +58,6 @@ def train(
 
     use_amp = hydra_cfg.get("use_amp")
 
-    # if hydra_cfg.get('hparams_search', None):
-    #     hparam = 'raytune'
-    # else:
-    #     hparam = 'default'
-
     size = len(dataloader.dataset)
     model.train()
     # If you want to check the one epoch time, use this code.
@@ -100,7 +96,6 @@ def train(
                     torch.save(model.state_dict(), hydra_cfg.ckpt_name)
                     print("Best model saved.")
                 elif hparam == "default":
-                    # assert not hydra_cfg.get("hparams_search")
                     try:
                         torch.save(
                             model.state_dict(),
@@ -132,13 +127,11 @@ def train(
                 "best_val_score": best_val_roc_auc,
             }
 
+            # log (default: wandB only, ray included: wandb, ray reporter)
             wandb.log(result_metrics)
             if hparam == "raytune":
                 result_metrics["progress_of_epoch"] = f"{100*current/size:.1f} %"
                 session.report(metrics=result_metrics)
-            # elif hparam == "default":
-            #     # assert not hydra_cfg.get("hparams_search")
-            #     wandb.log(result_metrics)
 
         model.train()
 
@@ -182,12 +175,7 @@ def val(dataloader, model, loss_f):
     return val_loss, val_roc_auc, val_pred, val_true
 
 
-def trainval(config, hydra_cfg, best_val_roc_auc=0):
-
-    if hydra_cfg.get("hparams_search", None):
-        hparam = "raytune"
-    else:
-        hparam = "default"
+def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
 
     # conditional training
     if hydra_cfg.conditional_train.execute_mode == "none":
@@ -205,15 +193,23 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
     batch_size: int = config.get("batch_size", hydra_cfg["batch_size"])
 
     # Initialize WandB
-    if hparam == "default":
-        wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    if hparam == "none":
         wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
     elif hparam == "raytune":
-        wandb_r = setup_wandb(  # noqa: F841
-            project=hydra_cfg.project_name, config=wandb_cfg
+        logdir = session.get_trial_dir()
+        # print('Logdir: ' + logdir)
+        with open(logdir + "params.pkl", "rb") as f:
+            params = pickle.load(f)
+        wandb_cfg = {key: params.get(key, wandb_cfg[key]) for key in wandb_cfg}
+
+        wandb_r = setup_wandb(
+            project=hydra_cfg.project_name,
+            dir=session.get_trial_dir(),
+            config=wandb_cfg,
         )
 
-    # set
+    # Dataset
     train_dataset = CXRDataset(
         "train",
         **hydra_cfg.Dataset,
@@ -265,21 +261,21 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
             hparam,
         )
 
-    if hparam == "default":
+    if hparam == "none":
         wandb.finish()
 
 
-@hydra.main(version_base=None, config_path="config", config_name="config")
-def main(hydra_cfg: DictConfig):
-    config = hydra_cfg
-    seed_everything(hydra_cfg.seed)
+# @hydra.main(version_base=None, config_path="config", config_name="config")
+# def main(hydra_cfg: DictConfig):
+#     config = hydra_cfg
+#     seed_everything(hydra_cfg.seed)
 
-    if hydra_cfg.get("print_config"):
-        # log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
-        print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
+#     if hydra_cfg.get("print_config"):
+#         # log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
+#         print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
 
-    trainval(config, hydra_cfg)
+#     trainval(config, hydra_cfg)
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

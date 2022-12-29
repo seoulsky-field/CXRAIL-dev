@@ -37,16 +37,13 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 working_dir = os.getcwd()
 
 
-def default(hydra_cfg):
-    # wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
-    # wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
+def default(hydra_cfg, hparam):
     config = hydra_cfg
     print("working dir: " + os.getcwd())
-    trainval(config, hydra_cfg, best_val_roc_auc=0)
-    # wandb.finish()
+    trainval(config, hydra_cfg, hparam, best_val_roc_auc=0)
 
 
-def raytune(hydra_cfg):
+def raytune(hydra_cfg, hparam):
     print("working dir: " + os.getcwd())
 
     param_space = OmegaConf.to_container(
@@ -58,7 +55,7 @@ def raytune(hydra_cfg):
     # execute run
     tuner = tune.Tuner(
         trainable=tune.with_resources(
-            partial(trainval, hydra_cfg=hydra_cfg, best_val_roc_auc=0),
+            partial(trainval, hydra_cfg=hydra_cfg, hparam=hparam, best_val_roc_auc=0),
             {
                 "cpu": int(round(multiprocessing.cpu_count() / 2)),
                 "gpu": int(torch.cuda.device_count()),
@@ -68,7 +65,7 @@ def raytune(hydra_cfg):
         tune_config=tune_config,
         run_config=run_config,
     )
-    analysis = tuner.fit()  # noqa: F841
+    analysis = tuner.fit()
 
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
@@ -79,14 +76,12 @@ def main(hydra_cfg: DictConfig):
         print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
 
     # search
-    if hydra_cfg.get("hparams_search", None):
-        name = hydra_cfg.hparams_search.name
-        print("hyperparameter search:", name)
-        raytune(hydra_cfg)
-
+    hparam = hydra_cfg.hparams_search.name
+    print("hyperparameter search:", hparam)
+    if hparam == "raytune":
+        raytune(hydra_cfg, hparam)
     else:
-        print("default")
-        default(hydra_cfg)
+        default(hydra_cfg, hparam)
 
     os.chdir(working_dir)
 

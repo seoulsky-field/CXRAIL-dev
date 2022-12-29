@@ -261,8 +261,7 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
             hparam,
         )
 
-    if hparam == "none":
-        wandb.finish()
+    wandb.finish()
 
 
 # @hydra.main(version_base=None, config_path="config", config_name="config")

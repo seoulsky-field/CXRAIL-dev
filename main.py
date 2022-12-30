@@ -29,6 +29,8 @@ from hydra.core.hydra_config import HydraConfig
 from train import trainval
 from custom_utils.print_tree import print_config_tree
 from custom_utils.seed import seed_everything
+from custom_utils.custom_logger import Logger
+
 
 
 
@@ -40,9 +42,9 @@ def default(hydra_cfg):
     #wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
     config = hydra_cfg
     print('working dir: ' + os.getcwd())
-    trainval(config, hydra_cfg, best_val_roc_auc = 0)
+    ckpt_dir = trainval(config, hydra_cfg, best_val_roc_auc = 0)
     #wandb.finish()
-
+    return ckpt_dir
 
 def raytune(hydra_cfg):
     print('working dir: ' + os.getcwd())
@@ -76,6 +78,9 @@ def raytune(hydra_cfg):
     config_name = 'config'
 )
 def main(hydra_cfg: DictConfig):
+    custom_logger = Logger()
+    logger = custom_logger.initLogger()
+    
     seed_everything(hydra_cfg.seed)
     if hydra_cfg.get("print_config"):
         #log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
@@ -86,13 +91,16 @@ def main(hydra_cfg: DictConfig):
     if hydra_cfg.get('hparams_search', None):
         name = hydra_cfg.hparams_search.name
         print("hyperparameter search:", name)
-        best_checkpoint = raytune(hydra_cfg)
-
+        ckpt_dir = raytune(hydra_cfg)
 
     else:
         print('default')
-        default(hydra_cfg)
+        ckpt_dir = default(hydra_cfg)
     
+    print(hydra_cfg.time, ckpt_dir)
+
+    logger.info('%s: %s', hydra_cfg.time, ckpt_dir)
+
     os.chdir(working_dir)
 
 if __name__ == "__main__":

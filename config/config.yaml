@@ -2,15 +2,16 @@
 rotate_degree: 15
 lr: 0.0001
 batch_size: 32
-weight_decay: 0.0001    # 1e-4
+weight_decay: 0.0001 # 1e-4
 
 ###user modifiable configs###
 ckpt_name: "best_saved.pth"
-epochs: 1
+epochs: 2
 seed: 12345
 num_workers: 2
 num_classes: 5
-log_dir: ./logs/${now:%Y-%m-%d_%H-%M-%S}
+time: ${now:%Y-%m-%d_%H-%M-%S}
+log_dir: ./logs/train/${now:%Y-%m-%d_%H-%M-%S}
 save_dir: ${log_dir}/${hydra:job.override_dirname}
 
 ###ray###
@@ -18,7 +19,7 @@ num_samples: 3
 
 ###WandB###
 api_key: 6f04832391d6396d423a53c7dfe4533d7ab47c31
-project_name: jieon_test    # subject to change
+project_name: jieon_test # subject to change
 
 ###Hydra Configs###
 hydra:
@@ -38,11 +39,11 @@ defaults:
   - Dataloader: Dataloader
   - optimizer: adam
   - loss: Multi_Soft_Margin
-  - model: resnet
-  - hparams_search: null
+  - model: densenet
+  - hparams_search: null #raytune
   - logging: wandb
-  - conditional_train: none    # Conditional training option. 'default' or 'none'
+  - conditional_train: none # Conditional training option. 'default' or 'none'
 
 ####experimental
 print_config: False
-use_amp: True    # Automatic mixed precision option. True or False
+use_amp: True # Automatic mixed precision option. True or False

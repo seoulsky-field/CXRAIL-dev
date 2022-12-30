@@ -5,12 +5,11 @@ batch_size: 32
 weight_decay: 0.0001 # 1e-4
 
 ###user modifiable configs###
-ckpt_name: "best_saved.pth"
-epochs: 3
+epochs: 2
 seed: 12345
 num_workers: 2
 num_classes: 5
-log_dir: ./logs/${now:%Y-%m-%d_%H-%M-%S}
+log_dir: ./logs/inference/${now:%Y-%m-%d_%H-%M-%S}
 save_dir: ${log_dir}/${hydra:job.override_dirname}
 
 ###ray###

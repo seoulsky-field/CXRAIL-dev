@@ -52,9 +52,8 @@ def train(
     optimizer,
     epoch,
     best_val_roc_auc,
-    hparam,
+    hparam
 ):
-
     use_amp = hydra_cfg.get("use_amp")
 
     # if hydra_cfg.get('hparams_search', None):
@@ -105,20 +104,14 @@ def train(
                 }
 
                 if hparam == "raytune":
-                    torch.save(save_dict, hydra_cfg.ckpt_name)
-                    print("Best model saved.")
+                    ckpt_dir = hydra_cfg.ckpt_name
+
                 elif hparam == "default":
-                    try:
-                        torch.save(
-                            save_dict,
-                            HydraConfig.get().run.dir + "/" + hydra_cfg.ckpt_name,
-                        )
-                    except BaseException:
-                        torch.save(
-                            save_dict,
-                            hydra_cfg.save_dir + "/" + hydra_cfg.ckpt_name,
-                        )
-                    print("Best model saved.")
+                    ckpt_dir = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
+
+                torch.save(save_dict, ckpt_dir)
+                print("Best model saved.")
+
 
             report_metrics(val_pred, val_true, print_classification_result=False)
             print(
@@ -151,7 +144,7 @@ def train(
     # If you want to check the one epoch time, use this code.
     # print(f"One Epoch Finished. Time(s): {(time.time()-training_start_time):>5f}")
 
-    return best_val_roc_auc
+    return best_val_roc_auc, ckpt_dir
 
 
 def val(dataloader, model, loss_f):
@@ -255,7 +248,7 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
 
     # train
     for epoch in range(hydra_cfg.epochs):
-        best_val_roc_auc = train(
+        best_val_roc_auc, ckpt_dir = train(
             hydra_cfg,
             train_loader,
             val_loader,
@@ -269,7 +262,8 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
 
     if hparam == "default":
         wandb.finish()
-
+        
+    return ckpt_dir
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def main(hydra_cfg: DictConfig):

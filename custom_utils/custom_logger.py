@@ -5,21 +5,25 @@ import os
 import sys
 
 class Logger:
-    def __init__(self, filePath=None):
-        
+    def __init__(self, mode, filePath=None):
         self.className = "Logger"
+        self.mode = mode
+        self.filePath = filePath
+        
+        if self.filePath is None:
+            if self.mode == 'train':
+                self.filePath = "./logs/checkpoints/"
 
-        if filePath is None:
-            self.filePath = "./logs/checkpoints/"
+            elif self.mode == 'test':
+                self.filePath = "./logs/inference/"
         else:
             self.filePath = filePath
-
+            
         if not os.path.exists(self.filePath):
             os.makedirs(self.filePath)
 
         
     def initLogger(self):
-
         __logger = logging.getLogger("Logger")
 
         streamFormatter = colorlog.ColoredFormatter(
@@ -29,11 +33,16 @@ class Logger:
             #"%(asctime)s [%(levelname)-8s] <%(name)s>: %(module)s:%(lineno)d: %(message)s"
             "%(message)s"
         )
-
         streamHandler = colorlog.StreamHandler(sys.stdout)
-        
+    
+        if self.mode == 'train':
+            save_path = os.path.abspath(f"{self.filePath}checkpoint_path.yaml")
+
+        elif self.mode == 'test':
+            save_path = os.path.abspath(f"{self.filePath}test_result.yaml")
+
         fileHandler = handlers.TimedRotatingFileHandler(
-            os.path.abspath(f"{self.filePath}checkpoint_path.yaml"),
+            save_path,
             #os.path.abspath(f"checkpoint_path.yaml"),
             when="midnight",
             interval=1,

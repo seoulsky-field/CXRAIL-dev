@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-logs/
+logs/train/
 ray_analysis.ipynb
 # C extensions
 *.so

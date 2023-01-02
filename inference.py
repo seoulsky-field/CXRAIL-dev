@@ -34,6 +34,8 @@ from custom_utils.transform import create_transforms
 from data_loader.data_loader import *
 from custom_utils.print_tree import print_config_tree
 from custom_utils.seed import seed_everything
+from custom_utils.custom_logger import Logger
+
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -92,26 +94,26 @@ def load_model(hydra_cfg, check_point_path):
 )  
 def main(hydra_cfg:DictConfig):
     seed_everything(hydra_cfg.seed)
+    custom_logger = Logger(mode='test', filePath=hydra_cfg.save_dir)
+    logger = custom_logger.initLogger()
 
     test_dataset = CXRDataset('test', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid'), conditional_train=False,)
     test_loader = DataLoader(test_dataset, **hydra_cfg.Dataloader.test)
-
-    check_point_yaml = '/home/CheXpert_code/jieon/CXRAIL/CXRAIL-dev/logs/checkpoints/checkpoint_path.yaml'
+    check_point_yaml = os.path.join(os.getcwd(),'./logs/checkpoints/checkpoint_path.yaml')
 
     with open(check_point_yaml) as f:
         check_point_paths = yaml.load(f, Loader=yaml.FullLoader)
 
-    paths = check_point_paths.values()
     additional_info = []
     test_score = []
-    for check_point_path in paths:
+    for log_dir, check_point_path in check_point_paths.items():
         model, model_name = load_model(hydra_cfg, check_point_path)
         # test
         test_roc_auc = predict(model, test_loader)
         test_score.append(test_roc_auc)
         additional_info.append(model_name)
 
-
+        logger.info('%s: %s', log_dir, test_roc_auc)
     # for score, name in zip(test_score, additional_info):
     #     print(name, score)
 

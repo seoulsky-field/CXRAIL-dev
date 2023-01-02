@@ -70,8 +70,8 @@ def predict(model, test_loader):#, loss_f, optimizer):
   
 def load_model(hydra_cfg, check_point_path):
     check_point = torch.load(check_point_path)
-    model_name = check_point.get('model')
-    model_state = check_point.get('model_state_dict')
+    model_name = check_point.get('model', None)
+    model_state = check_point.get('model_state_dict', None)
 
     try:
         model = instantiate(hydra_cfg.models.resnet)
@@ -96,28 +96,24 @@ def main(hydra_cfg:DictConfig):
     test_dataset = CXRDataset('test', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid'), conditional_train=False,)
     test_loader = DataLoader(test_dataset, **hydra_cfg.Dataloader.test)
 
-    check_point_yaml = '/home/CheXpert_code/jieon/CXRAIL/CXRAIL-dev/logs/sample.yaml'
+    check_point_yaml = '/home/CheXpert_code/jieon/CXRAIL/CXRAIL-dev/logs/checkpoints/checkpoint_path.yaml'
 
     with open(check_point_yaml) as f:
         check_point_paths = yaml.load(f, Loader=yaml.FullLoader)
-    
+
     paths = check_point_paths.values()
     additional_info = []
     test_score = []
     for check_point_path in paths:
         model, model_name = load_model(hydra_cfg, check_point_path)
-
         # test
         test_roc_auc = predict(model, test_loader)
         test_score.append(test_roc_auc)
         additional_info.append(model_name)
-    # if hydra_cfg['analysis'] == True:
-    #     #csv 저장
-    #     return 0
-        
-    # else:
-    for score, name in zip(test_score, additional_info):
-        print(name, score)
+
+
+    # for score, name in zip(test_score, additional_info):
+    #     print(name, score)
 
     return test_score
 
@@ -126,4 +122,4 @@ def main(hydra_cfg:DictConfig):
 
 if __name__ == '__main__':
 
-    test_score = main()
+    test_score = main()  

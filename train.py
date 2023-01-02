@@ -52,15 +52,10 @@ def train(
     optimizer,
     epoch,
     best_val_roc_auc,
-    hparam
+    hparam,
+    ckpt_dir
 ):
     use_amp = hydra_cfg.get("use_amp")
-
-    # if hydra_cfg.get('hparams_search', None):
-    #     hparam = 'raytune'
-    # else:
-    #     hparam = 'default'
-
     size = len(dataloader.dataset)
     model.train()
     # If you want to check the one epoch time, use this code.
@@ -103,12 +98,6 @@ def train(
                     'optimizer_state_dict': optimizer.state_dict(), 
                 }
 
-                if hparam == "raytune":
-                    ckpt_dir = hydra_cfg.ckpt_name
-
-                elif hparam == "default":
-                    ckpt_dir = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
-
                 torch.save(save_dict, ckpt_dir)
                 print("Best model saved.")
 
@@ -136,7 +125,6 @@ def train(
                 result_metrics["progress_of_epoch"] = f"{100*current/size:.1f} %"
                 session.report(metrics=result_metrics)
             elif hparam == "default":
-                # assert not hydra_cfg.get("hparams_search")
                 wandb.log(result_metrics)
 
         model.train()
@@ -144,7 +132,7 @@ def train(
     # If you want to check the one epoch time, use this code.
     # print(f"One Epoch Finished. Time(s): {(time.time()-training_start_time):>5f}")
 
-    return best_val_roc_auc, ckpt_dir
+    return best_val_roc_auc
 
 
 def val(dataloader, model, loss_f):
@@ -184,8 +172,11 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
 
     if hydra_cfg.get("hparams_search", None):
         hparam = "raytune"
+        ckpt_dir = hydra_cfg.ckpt_name
     else:
         hparam = "default"
+        ckpt_dir = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
+
 
     # conditional training
     if hydra_cfg.conditional_train.execute_mode == "none":
@@ -248,7 +239,7 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
 
     # train
     for epoch in range(hydra_cfg.epochs):
-        best_val_roc_auc, ckpt_dir = train(
+        best_val_roc_auc = train(
             hydra_cfg,
             train_loader,
             val_loader,
@@ -258,6 +249,7 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
             epoch,
             best_val_roc_auc,
             hparam,
+            ckpt_dir
         )
 
     if hparam == "default":

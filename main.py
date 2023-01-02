@@ -97,10 +97,7 @@ def main(hydra_cfg: DictConfig):
         print('default')
         ckpt_dir = default(hydra_cfg)
     
-    print(hydra_cfg.time, ckpt_dir)
-
     logger.info('%s: %s', hydra_cfg.time, ckpt_dir)
-
     os.chdir(working_dir)
 
 if __name__ == "__main__":

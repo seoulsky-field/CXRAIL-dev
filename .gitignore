@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 logs/
-custom_utils/ray_analysis.py
+ray_analysis.ipynb
 # C extensions
 *.so
 

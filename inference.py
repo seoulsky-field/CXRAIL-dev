@@ -94,7 +94,7 @@ def load_model(hydra_cfg, check_point_path):
 )  
 def main(hydra_cfg:DictConfig):
     seed_everything(hydra_cfg.seed)
-    custom_logger = Logger(mode='test', filePath=hydra_cfg.save_dir)
+    custom_logger = Logger(mode='test', filePath=hydra_cfg.log_dir)
     logger = custom_logger.initLogger()
 
     test_dataset = CXRDataset('test', **hydra_cfg.Dataset, transforms=create_transforms(hydra_cfg, 'valid'), conditional_train=False,)

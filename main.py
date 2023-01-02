@@ -34,7 +34,6 @@ from custom_utils.seed import seed_everything
 from custom_utils.custom_logger import Logger
 
 
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 working_dir = os.getcwd()
 

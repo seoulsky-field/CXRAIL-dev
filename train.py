@@ -6,6 +6,7 @@ import random
 import wandb
 import pprint
 import time
+import pickle
 
 import torch
 import torch.nn as nn
@@ -27,6 +28,7 @@ from ray import tune
 from ray.air import session
 from ray.air.checkpoint import Checkpoint
 from ray.air.config import ScalingConfig
+from ray.air.integrations.wandb import setup_wandb
 
 # 내부 모듈
 from custom_utils.custom_metrics import *
@@ -53,9 +55,10 @@ def train(
     epoch,
     best_val_roc_auc,
     hparam,
-    ckpt_dir
+    ckpt_path
 ):
     use_amp = hydra_cfg.get("use_amp")
+
     size = len(dataloader.dataset)
     model.train()
     # If you want to check the one epoch time, use this code.
@@ -98,7 +101,7 @@ def train(
                     'optimizer_state_dict': optimizer.state_dict(), 
                 }
 
-                torch.save(save_dict, ckpt_dir)
+                torch.save(save_dict, ckpt_path)
                 print("Best model saved.")
 
 
@@ -121,11 +124,11 @@ def train(
                 "best_val_score": best_val_roc_auc,
             }
 
+            # log (default: wandB only, ray included: wandb, ray reporter)
+            wandb.log(result_metrics)
             if hparam == "raytune":
                 result_metrics["progress_of_epoch"] = f"{100*current/size:.1f} %"
                 session.report(metrics=result_metrics)
-            elif hparam == "default":
-                wandb.log(result_metrics)
 
         model.train()
 
@@ -168,15 +171,7 @@ def val(dataloader, model, loss_f):
     return val_loss, val_roc_auc, val_pred, val_true
 
 
-def trainval(config, hydra_cfg, best_val_roc_auc=0):
-
-    if hydra_cfg.get("hparams_search", None):
-        hparam = "raytune"
-        ckpt_dir = hydra_cfg.ckpt_name
-    else:
-        hparam = "default"
-        ckpt_dir = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
-
+def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
 
     # conditional training
     if hydra_cfg.conditional_train.execute_mode == "none":
@@ -187,19 +182,33 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
         model.load_state_dict(best_model_state)
         model.reset_classifier(num_classes=5)
 
-    # Initialize WandB
-    # wandb.init(**hydra_cfg.logging.setup, config = wandb_cfg)
-    if hparam == "default":
-        wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
-        wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
-
     # search space
     lr: float = config.get("lr", hydra_cfg["lr"])
     weight_decay: float = config.get("weight_decay", hydra_cfg["lr"])
     rotate_degree: float = config.get("rotate_degree", hydra_cfg["weight_decay"])
     batch_size: int = config.get("batch_size", hydra_cfg["batch_size"])
 
-    # set
+    # Initialize WandB
+    wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    if hparam == "none":
+        ckpt_path = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
+        wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
+        
+    elif hparam == "raytune":
+        ckpt_path = hydra_cfg.ckpt_name
+        logdir = session.get_trial_dir()
+        # print('Logdir: ' + logdir)
+        with open(logdir + "params.pkl", "rb") as f:
+            params = pickle.load(f)
+        wandb_cfg = {key: params.get(key, wandb_cfg[key]) for key in wandb_cfg}
+
+        wandb_r = setup_wandb(
+            project=hydra_cfg.project_name,
+            dir=session.get_trial_dir(),
+            config=wandb_cfg,
+        )
+
+    # Dataset
     train_dataset = CXRDataset(
         "train",
         **hydra_cfg.Dataset,
@@ -249,25 +258,23 @@ def trainval(config, hydra_cfg, best_val_roc_auc=0):
             epoch,
             best_val_roc_auc,
             hparam,
-            ckpt_dir
+            ckpt_path
         )
 
-    if hparam == "default":
-        wandb.finish()
-        
-    return ckpt_dir
-
-@hydra.main(version_base=None, config_path="config", config_name="config")
-def main(hydra_cfg: DictConfig):
-    config = hydra_cfg
-    seed_everything(hydra_cfg.seed)
-
-    if hydra_cfg.get("print_config"):
-        # log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
-        print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
-
-    trainval(config, hydra_cfg)
+    wandb.finish()
 
 
-if __name__ == "__main__":
-    main()
+# @hydra.main(version_base=None, config_path="config", config_name="config")
+# def main(hydra_cfg: DictConfig):
+#     config = hydra_cfg
+#     seed_everything(hydra_cfg.seed)
+
+#     if hydra_cfg.get("print_config"):
+#         # log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
+#         print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
+
+#     trainval(config, hydra_cfg)
+
+
+# if __name__ == "__main__":
+#     main()

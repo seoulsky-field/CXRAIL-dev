@@ -6,7 +6,7 @@ weight_decay: 0.0001 # 1e-4
 
 ###user modifiable configs###
 ckpt_name: "best_saved.pth"
-epochs: 2
+epochs: 3
 seed: 12345
 num_workers: 2
 num_classes: 5
@@ -40,7 +40,7 @@ defaults:
   - optimizer: adam
   - loss: Multi_Soft_Margin
   - model: densenet
-  - hparams_search: null #raytune
+  - hparams_search: none
   - logging: wandb
   - conditional_train: none # Conditional training option. 'default' or 'none'
 

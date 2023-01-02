@@ -45,7 +45,7 @@ run_config:
       - progress_of_epoch
   local_dir: ${log_dir}/${hydra:sweep.subdir}
   verbose: 2
-  callbacks:
-    - _target_: ray.air.integrations.wandb.WandbLoggerCallback
-      api_key: ${api_key}
-      project: ${logging.setup.project}
+  # callbacks:
+  #   - _target_: ray.air.integrations.wandb.WandbLoggerCallback
+  #     api_key: ${api_key}
+  #     project: ${logging.setup.project}

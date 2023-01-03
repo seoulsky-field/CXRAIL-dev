@@ -20,7 +20,7 @@ flip_label: False
 label_smoothing: False
 smooth_mode: 'pos' # or 'neg'
 train_size: null
-auto_augmentation: False
+augmentation_mode: random # auto , random, custom
 
 train_cols:
   - "Cardiomegaly"

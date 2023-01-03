@@ -27,7 +27,7 @@ class CXRDataset(Dataset):
                  root_path, folder_path, image_size, labeler_path, #default settings
                  shuffle, seed, verbose, #experiment settings
                  use_frontal, use_enhancement, enhance_time, flip_label, train_size, label_smoothing, smooth_mode, conditional_train,
-                 train_cols, enhance_cols, auto_augmentation,
+                 train_cols, enhance_cols, augmentation_mode,
                  ):
         self.dataset = dataset
         self.mode = mode
@@ -56,7 +56,7 @@ class CXRDataset(Dataset):
         self.transforms = transforms
         self.dir_path = self.root_path + self.folder_path
         self.train_size=train_size
-        self.auto_augmentation=auto_augmentation
+        self.augmentation_mode=augmentation_mode
 
         # Choose Dataset
         if self.dataset == 'CheXpert':

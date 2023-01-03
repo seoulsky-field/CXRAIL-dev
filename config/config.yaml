@@ -18,7 +18,7 @@ save_dir: ${log_dir}/${hydra:job.override_dirname}
 num_samples: 3
 
 ###WandB###
-project_name: jieon_test  # subject to change
+project_name:  # subject to change
 
 ###Hydra Configs###
 hydra:

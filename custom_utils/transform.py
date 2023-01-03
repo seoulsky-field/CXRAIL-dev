@@ -8,10 +8,10 @@ from hydra.utils import instantiate
 
 def create_transforms(hydra_cfg, mode, degree=15):
     image_size = hydra_cfg.Dataset.image_size
-    auto_augmentation = hydra_cfg.Dataset.auto_augmentation
+    augmentation_mode = hydra_cfg.Dataset.augmentation_mode
 
     if mode == 'train':
-        if auto_augmentation:
+        if augmentation_mode == 'auto':
             train_transforms = tfs.Compose([
                 tfs.ToTensor(),
                 tfs.ConvertImageDtype(torch.uint8),
@@ -20,7 +20,16 @@ def create_transforms(hydra_cfg, mode, degree=15):
                 tfs.Resize((image_size, image_size)),
                 tfs.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
                 ])
-        else:
+        elif augmentation_mode == 'random':
+            train_transforms = tfs.Compose([
+                tfs.ToTensor(),
+                tfs.ConvertImageDtype(torch.uint8),
+                tfs.RandAugment(),
+                tfs.ConvertImageDtype(torch.float32),
+                tfs.Resize((image_size, image_size)),
+                tfs.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),                
+            ])
+        elif augmentation_mode == 'custom':
             train_transforms = A.Compose([
                                         A.Affine(rotate=(-degree, degree), translate_percent=(0.05, 0.05), scale=(0.95, 1.05), cval=128),
                                         # A.HorizontalFlip(),
@@ -30,6 +39,8 @@ def create_transforms(hydra_cfg, mode, degree=15):
                                         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), max_pixel_value=255.0, always_apply=False, p=1.0),
                                         ToTensorV2()
                                         ])
+        else:
+            raise ValueError(f'Augmentation mode [{augmentation_mode}] is invalid')
         return train_transforms
     else:   
         val_transforms = A.Compose([
@@ -39,7 +50,3 @@ def create_transforms(hydra_cfg, mode, degree=15):
                                     ])
         return val_transforms
 
-# def image_augmentation(image):
-#     img_aug = tfs.Compose([tfs.RandomAffine(degrees=(-15, 15), translate=(0.05, 0.05), scale=(0.95, 1.05), fill=128)]) # pytorch 3.7: fillcolor --> fill
-#     image = img_aug(image)
-#     return image

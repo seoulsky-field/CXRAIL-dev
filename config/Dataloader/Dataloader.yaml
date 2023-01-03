@@ -12,8 +12,14 @@ train:
   drop_last: True
   shuffle: True
 
-test:
+valid:
   #batch_size: 128
+  num_workers: ${num_workers}
+  drop_last: False
+  shuffle: False
+
+test:
+  batch_size: ${batch_size}
   num_workers: ${num_workers}
   drop_last: False
   shuffle: False

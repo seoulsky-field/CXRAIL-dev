@@ -16,6 +16,7 @@ from libauc.metrics import auc_roc_score
 from torchmetrics.classification import MultilabelAUROC
 
 # hydra
+import logging
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
@@ -72,11 +73,11 @@ def train(
     val_loss,
     val_roc_auc,
     hparam,
+    ckpt_path,
     epoch_progress,
     epoch_task_id,
     valid_progress,
 ):
-
     use_amp = hydra_cfg.get("use_amp")
 
     size = len(dataloader.dataset)
@@ -114,22 +115,18 @@ def train(
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
+                save_dict = {
+                    'Dataset': hydra_cfg.get('Dataset')['dataset'],
+                    #'optimizer': hydra_cfg.get('optimizer')['_target_'].split('.')[-1],
+                    # 'loss': hydra_cfg.get('loss'),
+                    'model': hydra_cfg.get('model')['model_name'],
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(), 
+                }
 
-                if hparam == "raytune":
-                    torch.save(model.state_dict(), hydra_cfg.ckpt_name)
-                    print("Best model saved.")
-                elif hparam == "default":
-                    try:
-                        torch.save(
-                            model.state_dict(),
-                            HydraConfig.get().run.dir + "/" + hydra_cfg.ckpt_name,
-                        )
-                    except BaseException:
-                        torch.save(
-                            model.state_dict(),
-                            hydra_cfg.save_dir + "/" + hydra_cfg.ckpt_name,
-                        )
-                    print("Best model saved.")
+                torch.save(save_dict, ckpt_path)
+                print("Best model saved.")
+
 
             report_metrics(val_pred, val_true, print_classification_result=False)
             print(
@@ -206,8 +203,7 @@ def val(dataloader, model, loss_f, valid_progress):
 
         auroc = MultilabelAUROC(num_labels=5, average="macro", thresholds=None)
         auc_roc_scores = auroc(val_pred_tensor, val_true_tensor)
-        val_roc_auc = torch.mean(auc_roc_scores).numpy()
-
+        val_roc_auc = float(torch.mean(auc_roc_scores))
         val_loss /= num_batches
 
     valid_progress.update(valid_task_id, visible=False)
@@ -235,8 +231,11 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     # Initialize WandB
     wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
     if hparam == "none":
+        ckpt_path = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
         wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
+        
     elif hparam == "raytune":
+        ckpt_path = hydra_cfg.ckpt_name
         logdir = session.get_trial_dir()
         # print('Logdir: ' + logdir)
         with open(logdir + "params.pkl", "rb") as f:
@@ -266,7 +265,7 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
         train_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.train
     )
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.test
+        val_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.valid
     )
 
     model = model.to(device)
@@ -354,6 +353,7 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
                 val_loss,
                 val_roc_auc,
                 hparam,
+                ckpt_path,
                 epoch_progress,
                 epoch_id,
                 valid_progress,

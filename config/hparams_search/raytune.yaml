@@ -1,6 +1,5 @@
 #https://github1s.com/facebookresearch/hydra/blob/main/examples/patterns/multi-select/
 name: raytune
-program: main.py
 
 # should set in default
 param_space:

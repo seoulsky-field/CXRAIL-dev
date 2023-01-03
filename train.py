@@ -3,7 +3,6 @@ import logging
 import numpy as np
 import pandas as pd
 import random
-import wandb
 import pprint
 import time
 import pickle
@@ -29,6 +28,23 @@ from ray.air.checkpoint import Checkpoint
 from ray.air.config import ScalingConfig
 from ray.air.integrations.wandb import setup_wandb
 
+# wandb
+import wandb
+
+# rich
+from rich.progress import track
+from rich.console import Group
+from rich.live import Live
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
+from rich.progress import DownloadColumn, TransferSpeedColumn, TimeRemainingColumn
+from rich.rule import Rule
+
 # 내부 모듈
 from custom_utils.custom_metrics import *
 from custom_utils.custom_metrics import report_metrics
@@ -53,7 +69,12 @@ def train(
     optimizer,
     epoch,
     best_val_roc_auc,
+    val_loss,
+    val_roc_auc,
     hparam,
+    epoch_progress,
+    epoch_task_id,
+    valid_progress,
 ):
 
     use_amp = hydra_cfg.get("use_amp")
@@ -87,7 +108,9 @@ def train(
 
         if batch % 500 == 0:
             loss, current = loss.item(), batch * len(data_X)
-            val_loss, val_roc_auc, val_pred, val_true = val(val_loader, model, loss_f)
+            val_loss, val_roc_auc, val_pred, val_true = val(
+                val_loader, model, loss_f, valid_progress
+            )
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
@@ -133,24 +156,39 @@ def train(
                 result_metrics["progress_of_epoch"] = f"{100*current/size:.1f} %"
                 session.report(metrics=result_metrics)
 
+        epoch_progress.update(
+            epoch_task_id,
+            epoch=epoch + 1,
+            batch=batch + 1,
+            loss=loss,
+            val_loss=val_loss,
+            val_auc=val_roc_auc,
+            best_val_auc=best_val_roc_auc,
+            advance=1,
+        )
+
         model.train()
 
     # If you want to check the one epoch time, use this code.
     # print(f"One Epoch Finished. Time(s): {(time.time()-training_start_time):>5f}")
 
-    return best_val_roc_auc
+    return best_val_roc_auc, val_loss, val_roc_auc
 
 
-def val(dataloader, model, loss_f):
+def val(dataloader, model, loss_f, valid_progress):
     num_batches = len(dataloader)
     val_loss = 0
+    valid_task_id = valid_progress.add_task(
+        "", valid_batch=1, valid_loader_size=num_batches
+    )
 
     model.eval()
     with torch.no_grad():
         val_pred = []
         val_true = []
 
-        for X, y in dataloader:
+        for batch, (X, y) in enumerate(dataloader):
+            valid_progress.update(valid_task_id, valid_batch=batch)
             X, y = X.to(device), y.to(device)
 
             pred = model(X)
@@ -171,6 +209,8 @@ def val(dataloader, model, loss_f):
         val_roc_auc = torch.mean(auc_roc_scores).numpy()
 
         val_loss /= num_batches
+
+    valid_progress.update(valid_task_id, visible=False)
 
     return val_loss, val_roc_auc, val_pred, val_true
 
@@ -247,19 +287,77 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
             weight_decay=weight_decay,
         )
 
+    # rich
+    # label_progress = Progress(
+    #     TimeElapsedColumn(),
+    #     TextColumn('{task.description}')
+    # )
+
+    epoch_progress = Progress(
+        TextColumn("[bold blue] Training epoch {task.fields[epoch]}: "),
+        BarColumn(style="magenta"),
+        TextColumn("[bold] {task.fields[batch]} / {task.fields[loader_size]}"),
+        TimeRemainingColumn(),
+        TextColumn(
+            "loss: {task.fields[loss]:>5f} | val/loss: {task.fields[val_loss]:>5f} | val/auc: {task.fields[val_auc]:>5f} | best_val/auc: {task.fields[best_val_auc]:>5f}"
+        ),
+    )
+
+    valid_progress = Progress(
+        TextColumn("[bold blue]   Validation: "),
+        BarColumn(),
+        TextColumn(
+            "[bold] {task.fields[valid_batch]} / {task.fields[valid_loader_size]}"
+        ),
+        TimeRemainingColumn(),
+    )
+
+    group = Group(
+        # label_progress,
+        Rule(style="#AAAAAA"),
+        epoch_progress,
+        valid_progress,
+    )
+
+    live = Live(group)
+    val_loss = 0
+    val_roc_auc = 0
+    best_val_roc_auc = 0
+    loader_size = len(train_loader)
+
     # train
-    for epoch in range(hydra_cfg.epochs):
-        best_val_roc_auc = train(
-            hydra_cfg,
-            train_loader,
-            val_loader,
-            model,
-            loss_f,
-            optimizer,
-            epoch,
-            best_val_roc_auc,
-            hparam,
+    with live:
+        epoch_id = epoch_progress.add_task(
+            "",
+            epoch=1,
+            batch=1,
+            loader_size=loader_size,
+            loss=0,
+            val_loss=val_loss,
+            val_auc=val_roc_auc,
+            best_val_auc=best_val_roc_auc,
+            total=loader_size,
         )
+        for epoch in range(hydra_cfg.epochs):
+
+            epoch_progress.reset(epoch_id)
+
+            best_val_roc_auc, val_loss, val_roc_auc = train(
+                hydra_cfg,
+                train_loader,
+                val_loader,
+                model,
+                loss_f,
+                optimizer,
+                epoch,
+                best_val_roc_auc,
+                val_loss,
+                val_roc_auc,
+                hparam,
+                epoch_progress,
+                epoch_id,
+                valid_progress,
+            )
 
     wandb.finish()
 

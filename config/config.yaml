@@ -10,7 +10,7 @@ epochs: 3
 seed: 12345
 num_workers: 2
 num_classes: 5
-time: ${now:%Y-%m-%d_%H-%M-%S}
+
 log_dir: ./logs/train/${now:%Y-%m-%d_%H-%M-%S}
 save_dir: ${log_dir}/${hydra:job.override_dirname}
 
@@ -39,7 +39,7 @@ defaults:
   - optimizer: adam
   - loss: Multi_Soft_Margin
   - model: densenet
-  - hparams_search: none
+  - hparams_search: raytune
   - logging: wandb
   - conditional_train: none # Conditional training option. 'default' or 'none'
 

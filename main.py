@@ -21,6 +21,7 @@ from ray.tune.experiment import Trial
 from typing import Any, Callable, Dict, List, Optional, Union
 from custom_utils.custom_reporter import TrialTerminationReporter
 from custom_utils.ray_analysis import RayAnalysis
+
 # hydra
 import hydra
 from omegaconf import DictConfig, OmegaConf, errors
@@ -70,20 +71,18 @@ def raytune(hydra_cfg, hparam):
 
     ray_analysis = RayAnalysis(analysis)
     best_checkpoint = ray_analysis.get_best_checkpoint()
-    ckpt_path = '.' + best_checkpoint.split(os.getcwd())[1]  # NEEDS TO BE MODIFIED
+    ckpt_path = "." + best_checkpoint.split(os.getcwd())[1]  # NEEDS TO BE MODIFIED
 
     return ckpt_path
 
-    
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def main(hydra_cfg: DictConfig):
-    custom_logger = Logger(mode='train')
+    custom_logger = Logger(mode="train")
     logger = custom_logger.initLogger()
-    
+
     seed_everything(hydra_cfg.seed)
     if hydra_cfg.get("print_config"):
-        # log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
         print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
 
     # search
@@ -96,10 +95,11 @@ def main(hydra_cfg: DictConfig):
         ckpt_path = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
         default(hydra_cfg, hparam)
 
-    logger.info('%s: %s', hydra_cfg.time, ckpt_path)
+    log_key = hydra_cfg.save_dir.split("train/")[-1].strip("/")
+    logger.info("%s: %s", log_key, ckpt_path)
+
     os.chdir(working_dir)
 
 
 if __name__ == "__main__":
-
     main()

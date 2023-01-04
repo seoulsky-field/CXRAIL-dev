@@ -24,7 +24,6 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 from hydra.core.hydra_config import HydraConfig
 
-
 # ray
 from ray import tune
 from ray.air import session
@@ -106,6 +105,68 @@ def load_model(hydra_cfg, check_point_path):
     return model, model_name
 
 
+def load_hydra_config(check_point_path):
+
+    if "trainval" in check_point_path:
+        # ray logging file structure
+        config_yaml = check_point_path.split("trainval")[0] + ".hydra/config.yaml"
+        hydra_yaml = check_point_path.split("trainval")[0] + ".hydra/hydra.yaml"
+        override_yaml = check_point_path.split("trainval")[0] + ".hydra/overrides.yaml"
+    else:
+        config_yaml = check_point_path.split("best_saved.pth")[0] + ".hydra/config.yaml"
+        hydra_yaml = check_point_path.split("best_saved.pth")[0] + ".hydra/hydra.yaml"
+        override_yaml = (
+            check_point_path.split("best_saved.pth")[0] + ".hydra/overrides.yaml"
+        )
+
+    with open(config_yaml) as f:
+        config_ = yaml.load(f, Loader=yaml.FullLoader)
+    with open(hydra_yaml) as f:
+        hydra_ = yaml.load(f, Loader=yaml.FullLoader)
+    with open(override_yaml) as f:
+        override_ = yaml.load(f, Loader=yaml.FullLoader)
+
+    hydra_config = hydra_["hydra"]["runtime"]["choices"]
+    multirun_config = "\n".join(s for s in override_)
+
+    report_configs = {
+        "epoch": config_.get("epochs", "None"),
+        "hparams_search": hydra_config.get("hparams_search", "None"),
+        "Model": hydra_config.get("model", "None"),
+        "loss_func": hydra_config.get("loss", "None"),
+        "Optimizer": hydra_config.get("optimizer", "None"),
+        "Dataset": hydra_config.get("Dataset", "None"),
+        "Multirun": multirun_config,
+    }
+    return report_configs
+
+
+def save_result_csv(report_configs, hydra_cfg):
+    try:
+        columns = [
+            "log_dir",
+            "test_roc_auc",
+            "Dataset",
+            "Model",
+            "Optimizer",
+            "loss_func",
+            "hparams_search",
+            "Multirun",
+            "epoch",
+        ]
+    except Exception:
+        # for user who doesn't have hydra config
+        colums = list(report_configs.keys())
+
+    result_df = pd.DataFrame(report_configs, columns=columns)
+    result_df.set_index("log_dir", inplace=True)
+
+    save_path = os.path.join(hydra_cfg.log_dir, "inference_result.csv")
+    result_df.to_csv(save_path, index=True)
+    print(result_df)
+    return result_df
+
+
 @hydra.main(version_base=None, config_path="config", config_name="test.yaml")
 def main(hydra_cfg: DictConfig):
     seed_everything(hydra_cfg.seed)
@@ -126,22 +187,37 @@ def main(hydra_cfg: DictConfig):
     with open(check_point_yaml) as f:
         check_point_paths = yaml.load(f, Loader=yaml.FullLoader)
 
-    additional_info = []
     test_score = []
+    report_configs_dict = []
     for log_dir, check_point_path in check_point_paths.items():
+
         model, model_name = load_model(hydra_cfg, check_point_path)
+
         # test
         test_roc_auc = predict(hydra_cfg, model, test_loader)
         test_score.append(test_roc_auc)
-        additional_info.append(model_name)
 
+        # saving configs
+        try:
+            report_configs = load_hydra_config(check_point_path)
+            report_configs["test_roc_auc"] = test_roc_auc
+            report_configs["log_dir"] = log_dir
+
+        except BaseException:
+            # for user who doesn't have hydra config
+            report_configs = {}
+            report_configs["log_dir"] = log_dir
+            report_configs["test_roc_auc"] = test_roc_auc
+            report_configs["Model"] = model_name
+
+        report_configs_dict.append(report_configs)
+
+        # score logging
         logger.info("%s: %s", log_dir, test_roc_auc)
-    # for score, name in zip(test_score, additional_info):
-    #     print(name, score)
 
+    result_df = save_result_csv(report_configs_dict, hydra_cfg)
     return test_score
 
 
 if __name__ == "__main__":
-
     test_score = main()

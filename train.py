@@ -1,5 +1,6 @@
 import os
-import logging
+
+# import logging
 import numpy as np
 import pandas as pd
 import random
@@ -77,6 +78,7 @@ def train(
     epoch_progress,
     epoch_task_id,
     valid_progress,
+    stop_patience,
 ):
     use_amp = hydra_cfg.get("use_amp")
 
@@ -114,19 +116,26 @@ def train(
             )
 
             if best_val_roc_auc < val_roc_auc:
+                stop_patience = 0
                 best_val_roc_auc = val_roc_auc
                 save_dict = {
-                    'Dataset': hydra_cfg.get('Dataset')['dataset'],
-                    #'optimizer': hydra_cfg.get('optimizer')['_target_'].split('.')[-1],
+                    "Dataset": hydra_cfg.get("Dataset")["dataset"],
+                    # 'optimizer': hydra_cfg.get('optimizer')['_target_'].split('.')[-1],
                     # 'loss': hydra_cfg.get('loss'),
-                    'model': hydra_cfg.get('model')['model_name'],
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(), 
+                    "model": hydra_cfg.get("model")["model_name"],
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
                 }
 
                 torch.save(save_dict, ckpt_path)
                 print("Best model saved.")
-
+            else:
+                stop_patience += 1
+                if stop_patience == hydra_cfg.stop_patience:
+                    print(
+                        f"Stop patience reached: {stop_patience}/{hydra_cfg.stop_patience}"
+                    )
+                    return best_val_roc_auc, val_loss, val_roc_auc, stop_patience
 
             report_metrics(val_pred, val_true, print_classification_result=False)
             print(
@@ -135,6 +144,7 @@ def train(
                 f"val_roc_auc: {val_roc_auc:>4f}, "
                 f"Best_val_score: {best_val_roc_auc:>4f}, "
                 f"epoch: {epoch+1}, "
+                f"Early stop patience: {stop_patience}/{hydra_cfg.stop_patience}, "
                 f"Batch ID: {batch}[{current:>5d}/{size:>5d}]"
             )
 
@@ -169,7 +179,7 @@ def train(
     # If you want to check the one epoch time, use this code.
     # print(f"One Epoch Finished. Time(s): {(time.time()-training_start_time):>5f}")
 
-    return best_val_roc_auc, val_loss, val_roc_auc
+    return best_val_roc_auc, val_loss, val_roc_auc, stop_patience
 
 
 def val(dataloader, model, loss_f, valid_progress):
@@ -233,7 +243,7 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     if hparam == "none":
         ckpt_path = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
         wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
-        
+
     elif hparam == "raytune":
         ckpt_path = hydra_cfg.ckpt_name
         logdir = session.get_trial_dir()
@@ -337,11 +347,12 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
             best_val_auc=best_val_roc_auc,
             total=loader_size,
         )
+        stop_patience = 0
         for epoch in range(hydra_cfg.epochs):
 
             epoch_progress.reset(epoch_id)
 
-            best_val_roc_auc, val_loss, val_roc_auc = train(
+            best_val_roc_auc, val_loss, val_roc_auc, stop_patience = train(
                 hydra_cfg,
                 train_loader,
                 val_loader,
@@ -357,7 +368,11 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
                 epoch_progress,
                 epoch_id,
                 valid_progress,
+                stop_patience,
             )
+            if stop_patience == hydra_cfg.stop_patience:
+                print("Stop patience reached, train loop terminating.")
+                break
 
     wandb.finish()
 

@@ -46,3 +46,4 @@ defaults:
 ####experimental
 print_config: False
 use_amp: True # Automatic mixed precision option. True or False
+stop_patience: 5

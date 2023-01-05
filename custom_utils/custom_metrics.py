@@ -163,7 +163,7 @@ class TestMetricsReporter:
         self.preds = preds
         self.targets = targets
         self.hydra_cfg = hydra_cfg
-        self.save_dir = hydra_cfg.log_dir
+        self.save_dir = os.path.join(hydra_cfg.log_dir, "images")
 
 
 class AUROCMetricReporter(TestMetricsReporter):
@@ -202,7 +202,7 @@ class AUROCMetricReporter(TestMetricsReporter):
         if not overlap:
             plt.clf()
 
-        plt.title(f"{col_name} ROC Curve")
+        plt.title(f"{col_name} ROC Curve", fontweight="bold")
 
         plt.plot([0, 1], [0, 1], linestyle="--", markersize=0.05, color="black")
         plt.plot(
@@ -248,5 +248,5 @@ class AUROCMetricReporter(TestMetricsReporter):
                 color=colors[idx],
             )
 
-        plt.title("All Classes' ROC CURVE")
+        plt.title("All Classes' ROC CURVE", fontweight="bold")
         plt.savefig(os.path.join(self.save_dir, "overlap_roc_curve.png"), dpi=300)

@@ -94,6 +94,7 @@ def predict(hydra_cfg, model, test_loader):  # , loss_f, optimizer):
         rich.print("")
 
         if hydra_cfg.save_auroc_plot:
+            os.mkdir(os.path.join(hydra_cfg.log_dir, "images"))
             for idx in range(hydra_cfg.num_classes):
                 auroc_reporter.plot_class_auroc_details(
                     targets=test_true[:, idx],

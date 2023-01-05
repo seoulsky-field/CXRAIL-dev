@@ -58,7 +58,7 @@ from custom_utils.seed import seed_everything
 from custom_utils.conditional_train import c_trainval
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 scaler = GradScaler()
 
 
@@ -231,6 +231,8 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
         model = instantiate(hydra_cfg.model)  # load best model
         model.load_state_dict(best_model_state)
         model.reset_classifier(num_classes=5)
+
+    model = nn.DataParallel(model)  # Multi-GPU
 
     # search space
     lr: float = config.get("lr", hydra_cfg["lr"])

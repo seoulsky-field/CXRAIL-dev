@@ -78,7 +78,7 @@ class CXRDataset(Dataset):
                 self.df = pd.read_csv(
                     os.path.join(self.root_path + self.folder_path, self.mode + ".csv")
                 )
-            elif self.labeler == "CheXbert":
+            elif self.labeler == "CheXbert" or self.labeler == "VisualCheXbert":
                 if self.mode == "train":
                     self.df = pd.read_csv(
                         os.path.join(

@@ -6,13 +6,17 @@ import random
 import wandb
 import pprint
 from tqdm import tqdm
+from libauc.metrics import auc_roc_score
+import yaml
+from sklearn.metrics import roc_auc_score, roc_curve
+import matplotlib.pyplot as plt
+from typing import Optional
+
+# torch
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from libauc.metrics import auc_roc_score
-from torchmetrics.classification import MultilabelAUROC
-import yaml
 
 # hydra
 import hydra
@@ -26,8 +30,12 @@ from ray.air import session
 from ray.air.checkpoint import Checkpoint
 from ray.air.config import ScalingConfig
 
+# rich
+import rich
+from rich.progress import track
+
 # 내부 모듈
-from custom_utils.custom_metrics import *
+from custom_utils.custom_metrics import TestMetricsReporter, AUROCMetricReporter
 from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
 from data_loader.data_loader import CXRDataset
@@ -35,34 +43,47 @@ from custom_utils.print_tree import print_config_tree
 from custom_utils.seed import seed_everything
 from custom_utils.custom_logger import Logger
 
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def predict(model, test_loader):
+def predict(hydra_cfg, model, test_loader):  # , loss_f, optimizer):
     model.eval()
     with torch.no_grad():
         test_pred = []
         test_true = []
 
-        for batch_id, (X, y) in enumerate(test_loader):
-            assert len(test_loader) > 0
+        for _, (X, y) in track(
+            enumerate(test_loader),
+            description="[bold blue]Inference: ",
+            total=len(test_loader),
+        ):
 
             X = X.to(device, dtype=torch.float)
             y_pred = model(X)
             y_pred = torch.sigmoid(y_pred)
+
             test_pred.append(y_pred.cpu().detach().numpy())
             test_true.append(y.cpu().numpy())
+
         test_pred = np.concatenate(test_pred)
         test_true = np.concatenate(test_true)
 
-        test_pred_tensor = torch.from_numpy(test_pred)
-        test_true_tensor = torch.from_numpy(test_true)
+        auroc_reporter = AUROCMetricReporter(preds=test_pred, targets=test_true)
 
-        auroc = MultilabelAUROC(num_labels=5, average="macro", thresholds=None)
-        auc_roc_scores = auroc(test_pred_tensor, test_true_tensor)
-        test_roc_auc = torch.mean(auc_roc_scores).numpy()
+        rich.print(f"micro auc: {auroc_reporter.get_micro_auroc_score():>.4f}")
+        rich.print(f"macro auc: {auroc_reporter.get_macro_auroc_score():>.4f}")
+        rich.print(f"class aucs: {auroc_reporter.get_class_auroc_score()}")
 
-        print(f"Test accuracy: {test_roc_auc:>4f}")
+        for idx in range(hydra_cfg.num_classes):
+            fpr, tpr, thresholds, ix = auroc_reporter.get_auroc_details(
+                test_true[:, idx], test_pred[:, idx]
+            )
+            rich.print(
+                f"auroc class{idx}: TPR: {tpr[ix]:>.4f}, FPR: {fpr[ix]:>.4f}, Best Threshold: {thresholds[ix]:>.4f}"
+            )
+
+        test_roc_auc = auroc_reporter.get_macro_auroc_score()
 
     return test_roc_auc
 
@@ -75,7 +96,7 @@ def load_model(hydra_cfg, check_point_path):
     try:
         model = instantiate(hydra_cfg.models.resnet)
         model.load_state_dict(model_state)
-    except Exception:
+    except BaseException:
         model = instantiate(hydra_cfg.models.densenet)
         model.load_state_dict(model_state)
 
@@ -173,7 +194,7 @@ def main(hydra_cfg: DictConfig):
         model, model_name = load_model(hydra_cfg, check_point_path)
 
         # test
-        test_roc_auc = predict(model, test_loader)
+        test_roc_auc = predict(hydra_cfg, model, test_loader)
         test_score.append(test_roc_auc)
 
         # saving configs
@@ -182,7 +203,7 @@ def main(hydra_cfg: DictConfig):
             report_configs["test_roc_auc"] = test_roc_auc
             report_configs["log_dir"] = log_dir
 
-        except Exception:
+        except BaseException:
             # for user who doesn't have hydra config
             report_configs = {}
             report_configs["log_dir"] = log_dir

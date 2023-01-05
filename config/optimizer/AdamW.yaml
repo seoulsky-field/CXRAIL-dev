@@ -1,0 +1,8 @@
+_target_: torch.optim.Adam
+lr: ${lr} # (default: 1e-3)
+betas:
+        - 0.9
+        - 0.990
+        # defualt: (0.9, 0.999)
+eps: 1e-8
+weight_decay: ${weight_decay} #(default: 0)

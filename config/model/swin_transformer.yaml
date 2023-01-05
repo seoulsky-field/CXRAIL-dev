@@ -1,0 +1,6 @@
+#config/model/swin_transformer.yaml
+
+_target_: timm.create_model
+model_name: swinv2_cr_small_ns_224
+pretrained: True
+num_classes: ${num_classes}

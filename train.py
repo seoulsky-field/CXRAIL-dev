@@ -93,7 +93,7 @@ def train(
         optimizer.zero_grad()
 
         if use_amp:
-            with torch.autocast(device_type=str(device).split(":")[0]):
+            with torch.autocast(device_type=str(device)):
                 pred = model(data_X)
                 pred = torch.sigmoid(pred)  # for multi-label
                 loss = loss_f(pred, label_y)

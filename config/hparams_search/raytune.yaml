@@ -20,6 +20,7 @@ tune_config:
     _target_: ray.tune.search.hyperopt.HyperOptSearch
     metric: loss
     mode: min
+    random_state_seed: 12345 # seed for reproducible results
 
   # scheduler:
   #   _target_: ray.tune.schedulers.ASHAScheduler

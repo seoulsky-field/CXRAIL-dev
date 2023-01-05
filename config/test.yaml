@@ -37,3 +37,4 @@ defaults:
   #- model: densenet
   #- logging: wandb
 
+save_auroc_plot: True    # Save AUROC plot

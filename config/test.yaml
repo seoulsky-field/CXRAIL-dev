@@ -1,39 +1,26 @@
-#param_space:
-rotate_degree: 15
 lr: 0.0001
 batch_size: 32
-weight_decay: 0.0001 # 1e-4
+weight_decay: 0.0001
 
 ###user modifiable configs###
 epochs: 2
 seed: 12345
 num_workers: 2
 num_classes: 5
-log_dir: ./logs/inference/${now:%Y-%m-%d_%H-%M-%S}
+
+log_dir: ./logs/inference/loss_func/${now:%Y-%m-%d_%H-%M-%S}
 save_dir: ${log_dir}/${hydra:job.override_dirname}
 
-###ray###
-num_samples: 3
 
-models:
-  densenet:
-    _target_: timm.create_model
-    model_name: densenet121
-    pretrained: True
-    num_classes: ${num_classes}
-  resnet:
-    _target_: timm.create_model
-    model_name: resnet50
-    pretrained: True
-    num_classes: ${num_classes}
-
-###defaults###
 defaults:
   - _self_
-  - Dataset: CheXpert
   - Dataloader: Dataloader
-  # - optimizer: adam
-  # - loss: Multi_Soft_Margin
-  #- model: densenet
-  #- logging: wandb
 
+  # select Dataset
+  - Dataset@CheXpert: CheXpert
+  - Dataset@MIMIC: MIMIC
+
+  # select Model:
+  - model@densenet: densenet
+  - model@resnet: resnet
+  - model@swin_transformer: swin_transformer

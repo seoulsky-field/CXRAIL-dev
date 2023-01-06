@@ -109,14 +109,6 @@ def load_model(hydra_cfg, check_point_path):
     check_point = torch.load(check_point_path)
     train_info = load_hydra_config(check_point_path)
 
-    # except BaseException:
-    #     train_info = {
-    #         'Dataset': check_point.get("Dataset", None),
-    #         'Model': check_point.get("Model", None),
-    #         'Optimizer': check_point.get("Optimizer", None),
-    #         'loss_func': check_point.get("loss_func", None),
-    #     }
-
     model_name = train_info["Model"]
     model_state = check_point.get("model_state_dict", None)
 
@@ -193,9 +185,6 @@ def save_result_csv(report_configs, hydra_cfg):
         "Multirun",
         "epoch",
     ]
-    # except Exception:
-    #     # for user who doesn't have hydra config
-    #     colums = list(report_configs.keys())
 
     result_df = pd.DataFrame(report_configs, columns=columns)
     result_df.set_index("log_dir", inplace=True)

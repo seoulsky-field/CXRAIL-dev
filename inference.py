@@ -46,7 +46,7 @@ from custom_utils.custom_logger import Logger
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def predict(hydra_cfg, model, test_loader):
+def predict(hydra_cfg, model, test_loader, train_columns):
     model.eval()
     with torch.no_grad():
         test_pred = []
@@ -69,7 +69,10 @@ def predict(hydra_cfg, model, test_loader):
         test_true = np.concatenate(test_true)
 
         auroc_reporter = AUROCMetricReporter(
-            hydra_cfg=hydra_cfg, preds=test_pred, targets=test_true
+            hydra_cfg=hydra_cfg,
+            preds=test_pred,
+            targets=test_true,
+            target_columns=train_columns,
         )
 
         micro_auroc_score = round(auroc_reporter.get_micro_auroc_score(), 4)
@@ -80,7 +83,7 @@ def predict(hydra_cfg, model, test_loader):
         rich.print(f"Macro AUROC: {macro_auroc_score}")
         rich.print(f"Class AUROC: {class_auroc_score}")
 
-        train_columns = list(hydra_cfg.Dataset.train_cols)
+        # train_columns = list(hydra_cfg[dataset_name].train_cols)
 
         rich.print("")
         for idx in range(hydra_cfg.num_classes):
@@ -93,7 +96,9 @@ def predict(hydra_cfg, model, test_loader):
         rich.print("")
 
         if hydra_cfg.save_auroc_plot:
-            os.mkdir(os.path.join(hydra_cfg.log_dir, "images"))
+            plot_save_dir = os.path.join(hydra_cfg.log_dir, "images")
+            if not os.path.exists(plot_save_dir):
+                os.mkdir(plot_save_dir)
             for idx in range(hydra_cfg.num_classes):
                 auroc_reporter.plot_class_auroc_details(
                     targets=test_true[:, idx],
@@ -169,13 +174,13 @@ def load_hydra_config(check_point_path):
     return report_configs
 
 
-def save_result_csv(report_configs, hydra_cfg):
+def save_result_csv(report_configs, hydra_cfg, train_columns):
     columns = [
         "log_dir",
         "test_roc_auc",
         "micro_roc_auc",
     ]
-    columns += list(hydra_cfg.Dataset.train_cols)
+    columns += train_columns
     columns += [
         "Dataset",
         "Model",
@@ -216,14 +221,15 @@ def main(hydra_cfg: DictConfig):
         test_loader = DataLoader(test_dataset, **hydra_cfg.Dataloader.test)
         model, report_configs = load_model(hydra_cfg, check_point_path)
 
+        dataset_name = report_configs["Dataset"]
+        train_columns = list(hydra_cfg[dataset_name].train_cols)
+
+        print(train_columns)
         # test
         micro_auroc_score, macro_auroc_score, class_auroc_score = predict(
-            hydra_cfg, model, test_loader
+            hydra_cfg, model, test_loader, train_columns
         )
         test_score.append(macro_auroc_score)
-
-        train_columns = list(hydra_cfg.Dataset.train_cols)
-        print(train_columns)
 
         # saving configs
         report_configs["log_dir"] = log_dir
@@ -237,7 +243,7 @@ def main(hydra_cfg: DictConfig):
         # score logging
         logger.info("%s: %s", log_dir, macro_auroc_score)
 
-    result_df = save_result_csv(report_configs_dict, hydra_cfg)
+    result_df = save_result_csv(report_configs_dict, hydra_cfg, train_columns)
     return test_score
 
 

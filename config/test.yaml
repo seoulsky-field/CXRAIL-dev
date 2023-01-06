@@ -24,3 +24,5 @@ defaults:
   - model@densenet: densenet
   - model@resnet: resnet
   - model@swin_transformer: swin_transformer
+
+save_auroc_plot: True    # Save AUROC plot

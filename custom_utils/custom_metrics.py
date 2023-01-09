@@ -159,16 +159,17 @@ def report_metrics(preds, labels, print_classification_result=True):
 
 
 class TestMetricsReporter:
-    def __init__(self, hydra_cfg, preds, targets):
+    def __init__(self, hydra_cfg, preds, targets, target_columns):
         self.preds = preds
         self.targets = targets
         self.hydra_cfg = hydra_cfg
+        self.target_columns = target_columns
         self.save_dir = os.path.join(hydra_cfg.log_dir, "images")
 
 
 class AUROCMetricReporter(TestMetricsReporter):
-    def __init__(self, hydra_cfg, preds, targets):
-        super().__init__(hydra_cfg, preds, targets)
+    def __init__(self, hydra_cfg, preds, targets, target_columns):
+        super().__init__(hydra_cfg, preds, targets, target_columns)
 
     def get_class_auroc_score(self):
         return roc_auc_score(self.targets, self.preds, average=None)
@@ -235,7 +236,7 @@ class AUROCMetricReporter(TestMetricsReporter):
 
     def plot_overlap_roc_curve(self):
         # target_columns = *self.hydra_cfg.Dataset.train_cols
-        target_columns = list(self.hydra_cfg.Dataset.train_cols)
+        # target_columns = list(self.hydra_cfg.Dataset.train_cols)
         colors = ["orange", "green", "blue", "purple", "pink"]
 
         plt.clf()
@@ -243,7 +244,7 @@ class AUROCMetricReporter(TestMetricsReporter):
             self.plot_class_auroc_details(
                 self.targets[:, idx],
                 self.preds[:, idx],
-                col_name=target_columns[idx],
+                col_name=self.target_columns[idx],
                 overlap=True,
                 color=colors[idx],
             )

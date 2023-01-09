@@ -43,11 +43,10 @@ from custom_utils.print_tree import print_config_tree
 from custom_utils.seed import seed_everything
 from custom_utils.custom_logger import Logger
 
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def predict(hydra_cfg, model, test_loader):  # , loss_f, optimizer):
+def predict(hydra_cfg, model, test_loader, train_columns):
     model.eval()
     with torch.no_grad():
         test_pred = []
@@ -70,7 +69,10 @@ def predict(hydra_cfg, model, test_loader):  # , loss_f, optimizer):
         test_true = np.concatenate(test_true)
 
         auroc_reporter = AUROCMetricReporter(
-            hydra_cfg=hydra_cfg, preds=test_pred, targets=test_true
+            hydra_cfg=hydra_cfg,
+            preds=test_pred,
+            targets=test_true,
+            target_columns=train_columns,
         )
 
         micro_auroc_score = round(auroc_reporter.get_micro_auroc_score(), 4)
@@ -81,7 +83,7 @@ def predict(hydra_cfg, model, test_loader):  # , loss_f, optimizer):
         rich.print(f"Macro AUROC: {macro_auroc_score}")
         rich.print(f"Class AUROC: {class_auroc_score}")
 
-        train_columns = list(hydra_cfg.Dataset.train_cols)
+        # train_columns = list(hydra_cfg[dataset_name].train_cols)
 
         rich.print("")
         for idx in range(hydra_cfg.num_classes):
@@ -94,7 +96,9 @@ def predict(hydra_cfg, model, test_loader):  # , loss_f, optimizer):
         rich.print("")
 
         if hydra_cfg.save_auroc_plot:
-            os.mkdir(os.path.join(hydra_cfg.log_dir, "images"))
+            plot_save_dir = os.path.join(hydra_cfg.log_dir, "images")
+            if not os.path.exists(plot_save_dir):
+                os.mkdir(plot_save_dir)
             for idx in range(hydra_cfg.num_classes):
                 auroc_reporter.plot_class_auroc_details(
                     targets=test_true[:, idx],
@@ -108,19 +112,30 @@ def predict(hydra_cfg, model, test_loader):  # , loss_f, optimizer):
 
 def load_model(hydra_cfg, check_point_path):
     check_point = torch.load(check_point_path)
-    model_name = check_point.get("model", None)
+    train_info = load_hydra_config(check_point_path)
+
+    model_name = train_info["Model"]
     model_state = check_point.get("model_state_dict", None)
 
-    try:
-        model = instantiate(hydra_cfg.models.resnet)
-        model.load_state_dict(model_state)
-    except BaseException:
-        model = instantiate(hydra_cfg.models.densenet)
-        model.load_state_dict(model_state)
-
+    model_config = hydra_cfg[model_name]
+    model = instantiate(model_config)
     model = model.to(device)
 
-    return model, model_name
+    return model, train_info
+
+
+def load_dataset(hydra_cfg, check_point_path):
+    train_info = load_hydra_config(check_point_path)
+    data_name = train_info["Dataset"]
+    Dataset_cfg = hydra_cfg[data_name]
+
+    test_dataset = CXRDataset(
+        "test",
+        **Dataset_cfg,
+        transforms=create_transforms(Dataset_cfg, "valid"),
+        conditional_train=False,
+    )
+    return test_dataset
 
 
 def load_hydra_config(check_point_path):
@@ -159,26 +174,22 @@ def load_hydra_config(check_point_path):
     return report_configs
 
 
-def save_result_csv(report_configs, hydra_cfg):
-    try:
-        columns = [
-            "log_dir",
-            "test_roc_auc",
-            "micro_roc_auc",
-        ]
-        columns += list(hydra_cfg.Dataset.train_cols)
-        columns += [
-            "Dataset",
-            "Model",
-            "Optimizer",
-            "loss_func",
-            "hparams_search",
-            "Multirun",
-            "epoch",
-        ]
-    except BaseException:
-        # for user who doesn't have hydra config
-        columns = list(report_configs.keys())
+def save_result_csv(report_configs, hydra_cfg, train_columns):
+    columns = [
+        "log_dir",
+        "test_roc_auc",
+        "micro_roc_auc",
+    ]
+    columns += train_columns
+    columns += [
+        "Dataset",
+        "Model",
+        "Optimizer",
+        "loss_func",
+        "hparams_search",
+        "Multirun",
+        "epoch",
+    ]
 
     result_df = pd.DataFrame(report_configs, columns=columns)
     result_df.set_index("log_dir", inplace=True)
@@ -195,13 +206,6 @@ def main(hydra_cfg: DictConfig):
     custom_logger = Logger(mode="test", filePath=hydra_cfg.log_dir)
     logger = custom_logger.initLogger()
 
-    test_dataset = CXRDataset(
-        "test",
-        **hydra_cfg.Dataset,
-        transforms=create_transforms(hydra_cfg, "valid"),
-        conditional_train=False,
-    )
-    test_loader = DataLoader(test_dataset, **hydra_cfg.Dataloader.test)
     check_point_yaml = os.path.join(
         os.getcwd(), "./logs/checkpoints/checkpoint_path.yaml"
     )
@@ -213,42 +217,33 @@ def main(hydra_cfg: DictConfig):
     report_configs_dict = []
     for log_dir, check_point_path in check_point_paths.items():
 
-        model, model_name = load_model(hydra_cfg, check_point_path)
+        test_dataset = load_dataset(hydra_cfg, check_point_path)
+        test_loader = DataLoader(test_dataset, **hydra_cfg.Dataloader.test)
+        model, report_configs = load_model(hydra_cfg, check_point_path)
 
+        dataset_name = report_configs["Dataset"]
+        train_columns = list(hydra_cfg[dataset_name].train_cols)
+
+        print(train_columns)
         # test
         micro_auroc_score, macro_auroc_score, class_auroc_score = predict(
-            hydra_cfg, model, test_loader
+            hydra_cfg, model, test_loader, train_columns
         )
         test_score.append(macro_auroc_score)
 
-        train_columns = list(hydra_cfg.Dataset.train_cols)
-        print(train_columns)
-
         # saving configs
-        try:
-            report_configs = load_hydra_config(check_point_path)
-            report_configs["test_roc_auc"] = macro_auroc_score
-            report_configs["micro_roc_auc"] = micro_auroc_score
-            for class_name, score in zip(train_columns, class_auroc_score):
-                report_configs[class_name] = score
-            report_configs["log_dir"] = log_dir
-
-        except BaseException:
-            # for user who doesn't have hydra config
-            report_configs = {}
-            report_configs["log_dir"] = log_dir
-            report_configs["test_roc_auc"] = macro_auroc_score
-            report_configs["micro_roc_auc"] = micro_auroc_score
-            for class_name, score in zip(train_columns, class_auroc_score):
-                report_configs[class_name] = score
-            report_configs["Model"] = model_name
-
+        report_configs["log_dir"] = log_dir
+        report_configs["test_roc_auc"] = macro_auroc_score
+        report_configs["micro_roc_auc"] = micro_auroc_score
+        for class_name, score in zip(train_columns, class_auroc_score):
+            report_configs[class_name] = score
+        report_configs["log_dir"] = log_dir
         report_configs_dict.append(report_configs)
 
         # score logging
         logger.info("%s: %s", log_dir, macro_auroc_score)
 
-    result_df = save_result_csv(report_configs_dict, hydra_cfg)
+    result_df = save_result_csv(report_configs_dict, hydra_cfg, train_columns)
     return test_score
 
 

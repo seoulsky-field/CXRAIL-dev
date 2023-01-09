@@ -38,10 +38,10 @@ defaults:
   - Dataloader: Dataloader
   - optimizer: adam
   - loss: Multi_Soft_Margin
-  - model: densenet
+  - model: densenet             # Select training model. 'resnet': ResNet50, 'densenet': DenseNet121, 'swin_transformer': swinv2_small_224
   - hparams_search: raytune
   - logging: wandb
-  - conditional_train: none # Conditional training option. 'default' or 'none'
+  - conditional_train: none     # Conditional training option. 'default' or 'none'
 
 ####experimental
 print_config: False

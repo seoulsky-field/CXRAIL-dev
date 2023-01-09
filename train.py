@@ -120,9 +120,9 @@ def train(
                 best_val_roc_auc = val_roc_auc
                 save_dict = {
                     "Dataset": hydra_cfg.get("Dataset")["dataset"],
-                    # 'optimizer': hydra_cfg.get('optimizer')['_target_'].split('.')[-1],
-                    # 'loss': hydra_cfg.get('loss'),
-                    "model": hydra_cfg.get("model")["model_name"],
+                    "Optimizer": hydra_cfg.get("optimizer")["_target_"].split(".")[-1],
+                    "loss_func": hydra_cfg.get("loss")["_target_"].split(".")[-1],
+                    "Model": hydra_cfg.get("model")["model_name"],
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                 }
@@ -249,7 +249,6 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     elif hparam == "raytune":
         ckpt_path = hydra_cfg.ckpt_name
         logdir = session.get_trial_dir()
-        # print('Logdir: ' + logdir)
         with open(logdir + "params.pkl", "rb") as f:
             params = pickle.load(f)
         wandb_cfg = {key: params.get(key, wandb_cfg[key]) for key in wandb_cfg}
@@ -264,13 +263,13 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     train_dataset = CXRDataset(
         "train",
         **hydra_cfg.Dataset,
-        transforms=create_transforms(hydra_cfg, "train", rotate_degree),
+        transforms=create_transforms(hydra_cfg.Dataset, "train", rotate_degree),
         conditional_train=False,
     )
     val_dataset = CXRDataset(
         "valid",
         **hydra_cfg.Dataset,
-        transforms=create_transforms(hydra_cfg, "valid", rotate_degree),
+        transforms=create_transforms(hydra_cfg.Dataset, "valid", rotate_degree),
         conditional_train=False,
     )
     train_loader = DataLoader(
@@ -282,6 +281,7 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
 
     model = model.to(device)
     loss_f = instantiate(hydra_cfg.loss)
+
     if hydra_cfg.optimizer._target_.startswith("torch"):
         optimizer = instantiate(
             hydra_cfg.optimizer,

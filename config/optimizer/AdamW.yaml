@@ -1,4 +1,4 @@
-_target_: torch.optim.Adam
+_target_: torch.optim.AdamW
 lr: ${lr} # (default: 1e-3)
 betas:
         - 0.9

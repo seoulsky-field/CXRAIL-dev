@@ -1,6 +1,6 @@
 ---
-name: 'Keyword: Title of issue'
-about: Describe template purposes
+name: Custom Issue Template
+about: Custom Issue Template
 title: ''
 labels: ''
 assignees: ''

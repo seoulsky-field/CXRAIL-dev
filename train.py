@@ -56,6 +56,7 @@ from data_loader.data_loader import CXRDataset
 from custom_utils.print_tree import print_config_tree
 from custom_utils.seed import seed_everything
 from custom_utils.conditional_train import c_trainval
+from custom_utils.custom_logger import trainerLogger
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -79,6 +80,7 @@ def train(
     epoch_task_id,
     valid_progress,
     stop_patience,
+    logger,
 ):
     use_amp = hydra_cfg.get("use_amp")
 
@@ -158,7 +160,9 @@ def train(
             }
 
             # log (default: wandB only, ray included: wandb, ray reporter)
-            wandb.log(result_metrics)
+            logger.info(result_metrics)
+            if hydra_cfg.get("logging") is not None:
+                wandb.log(result_metrics)
             if hparam == "raytune":
                 result_metrics["progress_of_epoch"] = f"{100*current/size:.1f} %"
                 session.report(metrics=result_metrics)
@@ -224,13 +228,13 @@ def val(dataloader, model, loss_f, valid_progress):
 def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
 
     # conditional training
-    if hydra_cfg.conditional_train.execute_mode == "none":
-        model = instantiate(hydra_cfg.model)
-    elif hydra_cfg.conditional_train.execute_mode == "default":
+    if hydra_cfg.get("conditional_train") is not None:
         best_model_state = c_trainval(hydra_cfg, best_val_roc_auc=0)
         model = instantiate(hydra_cfg.model)  # load best model
         model.load_state_dict(best_model_state)
         model.reset_classifier(num_classes=5)
+    else:
+        model = instantiate(hydra_cfg.model)
 
     model = nn.DataParallel(model)  # Multi-GPU
 
@@ -241,23 +245,29 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     batch_size: int = config.get("batch_size", hydra_cfg["batch_size"])
 
     # Initialize WandB
-    wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+    if hydra_cfg.get("logging") is not None:
+        wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
     if hparam == "none":
         ckpt_path = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
-        wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
+        if hydra_cfg.get("logging") is not None:
+            wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
 
     elif hparam == "raytune":
         ckpt_path = hydra_cfg.ckpt_name
         logdir = session.get_trial_dir()
-        with open(logdir + "params.pkl", "rb") as f:
-            params = pickle.load(f)
-        wandb_cfg = {key: params.get(key, wandb_cfg[key]) for key in wandb_cfg}
+        if hydra_cfg.get("logging") is not None:
+            with open(logdir + "params.pkl", "rb") as f:
+                params = pickle.load(f)
+            wandb_cfg = {key: params.get(key, wandb_cfg[key]) for key in wandb_cfg}
 
-        wandb_r = setup_wandb(
-            project=hydra_cfg.project_name,
-            dir=session.get_trial_dir(),
-            config=wandb_cfg,
-        )
+            wandb_r = setup_wandb(
+                project=hydra_cfg.project_name,
+                dir=session.get_trial_dir(),
+                config=wandb_cfg,
+            )
+
+    custom_logger = trainerLogger(filePath=os.path.dirname(ckpt_path))
+    logger = custom_logger.initTrainerLogger()
 
     # Dataset
     train_dataset = CXRDataset(
@@ -371,12 +381,17 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
                 epoch_id,
                 valid_progress,
                 stop_patience,
+                logger,
             )
             if stop_patience == hydra_cfg.stop_patience:
                 print("Stop patience reached, train loop terminating.")
+                logger.info(
+                    f"Stop patience reached: {stop_patience}/{hydra_cfg.stop_patience}, train loop terminating."
+                )
                 break
 
-    wandb.finish()
+    if hydra_cfg.get("logging") is not None:
+        wandb.finish()
 
 
 # @hydra.main(version_base=None, config_path="config", config_name="config")

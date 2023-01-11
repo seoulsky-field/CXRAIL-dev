@@ -36,12 +36,12 @@ defaults:
   - _self_
   - Dataset: CheXpert
   - Dataloader: Dataloader
-  - optimizer: adam
+  - optimizer: Adam
   - loss: Multi_Soft_Margin
   - model: densenet             # Select training model. 'resnet': ResNet50, 'densenet': DenseNet121, 'swin_transformer': swinv2_small_224
-  - hparams_search: raytune
-  - logging: wandb
-  - conditional_train: none     # Conditional training option. 'default' or 'none'
+  - hparams_search: none
+  - logging: null
+  - conditional_train: null     # Conditional training option. 'conditional' or 'null'
 
 ####experimental
 print_config: False

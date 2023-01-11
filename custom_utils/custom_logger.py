@@ -57,3 +57,42 @@ class Logger:
         __logger.setLevel(logging.DEBUG)
 
         return __logger
+
+
+class trainerLogger:
+    def __init__(self, filePath=None):
+        self.className = "trainerLogger"
+        self.filePath = filePath
+
+        if self.filePath is None:
+            self.filePath = "./logs"
+        else:
+            self.filePath = filePath
+
+    def initTrainerLogger(self):
+        __logger = logging.getLogger("trainerLogger")
+        for handler in __logger.root.handlers:
+            if type(handler) is logging.StreamHandler:
+                handler.setLevel(logging.ERROR)
+
+        fileFormatter = logging.Formatter(
+            # "%(asctime)s [%(levelname)-8s] <%(name)s>: %(module)s:%(lineno)d: %(message)s"
+            "%(message)s"
+        )
+
+        save_path = os.path.abspath(f"{self.filePath}/train.log")
+
+        fileHandler = logging.FileHandler(
+            filename=save_path,
+            # os.path.abspath(f"checkpoint_path.yaml"),
+            # when="midnight",
+            # interval=1,
+            # backupCount=14,
+            encoding="utf-8",
+        )
+        fileHandler.setFormatter(fileFormatter)
+
+        __logger.addHandler(fileHandler)
+        __logger.setLevel(logging.DEBUG)
+
+        return __logger

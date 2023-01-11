@@ -59,7 +59,7 @@ class Logger:
         return __logger
 
 
-class trainerLogger:
+class TrainerLogger:
     def __init__(self, filePath=None):
         self.className = "trainerLogger"
         self.filePath = filePath
@@ -69,7 +69,7 @@ class trainerLogger:
         else:
             self.filePath = filePath
 
-    def initTrainerLogger(self):
+    def init_trainer_logger(self):
         __logger = logging.getLogger("trainerLogger")
         for handler in __logger.root.handlers:
             if type(handler) is logging.StreamHandler:

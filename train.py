@@ -56,7 +56,7 @@ from data_loader.data_loader import CXRDataset
 from custom_utils.print_tree import print_config_tree
 from custom_utils.seed import seed_everything
 from custom_utils.conditional_train import c_trainval
-from custom_utils.custom_logger import trainerLogger
+from custom_utils.custom_logger import TrainerLogger
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -266,8 +266,8 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
                 config=wandb_cfg,
             )
 
-    custom_logger = trainerLogger(filePath=os.path.dirname(ckpt_path))
-    logger = custom_logger.initTrainerLogger()
+    custom_logger = TrainerLogger(filePath=os.path.dirname(ckpt_path))
+    logger = custom_logger.init_trainer_logger()
 
     # Dataset
     train_dataset = CXRDataset(

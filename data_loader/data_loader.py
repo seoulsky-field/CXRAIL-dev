@@ -97,6 +97,20 @@ class CXRDataset(Dataset):
                 os.path.join(self.labeler_path, self.labeler, self.mode + ".csv")
             )  # label이 지금은 임시 directory에 있기 labeler path를 따로 인자로 받고있는데, 나중에 수정가능 할 것 같습니다.
 
+        # Use frontal
+        if self.use_frontal is True:
+            self.df = self.df[self.df["Frontal/Lateral"] == "Frontal"]
+
+        # enhancement (upsampling)
+        if self.use_enhancement:
+            # assert isinstance(self.enhance_cols, list), "Input should be list!" # This assertion is deprecated due to the usage of hydra
+            sampled_df_list = []
+            for col in self.enhance_cols:
+                print("Upsampling %s..." % col)
+                for times in range(self.enhance_time):
+                    sampled_df_list.append(self.df[self.df[col] == 1])
+            self.df = pd.concat([self.df] + sampled_df_list, axis=0)
+
         # Limit train data size
         if self.mode == "train":
             if self.train_size is None:
@@ -122,20 +136,6 @@ class CXRDataset(Dataset):
                 raise ValueError(
                     f"Type [{type(self.train_size)}] is not an expected type for training data size"
                 )
-
-        # Use frontal
-        if self.use_frontal is True:
-            self.df = self.df[self.df["Frontal/Lateral"] == "Frontal"]
-
-        # enhancement (upsampling)
-        if self.use_enhancement:
-            assert isinstance(self.enhance_cols, list), "Input should be list!"
-            sampled_df_list = []
-            for col in self.enhance_cols:
-                print("Upsampling %s..." % col)
-                for times in range(self.enhance_time):
-                    sampled_df_list.append(self.df[self.df[col] == 1])
-            self.df = pd.concat([self.df] + sampled_df_list, axis=0)
 
         # label smoothing
         if self.smooth_mode == "pos":

@@ -241,8 +241,15 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     # search space
     lr: float = config.get("lr", hydra_cfg["lr"])
     weight_decay: float = config.get("weight_decay", hydra_cfg["lr"])
-    rotate_degree: float = config.get("rotate_degree", hydra_cfg["weight_decay"])
     batch_size: int = config.get("batch_size", hydra_cfg["batch_size"])
+    asl_gamma_neg: int = config.get("asl_gamma_neg", hydra_cfg["asl_gamma_neg"])
+    asl_ps_factor: float = config.get("asl_ps_factor", hydra_cfg["asl_ps_factor"])
+    ra_num_ops: int = config.get("ra_num_ops", hydra_cfg["ra_num_ops"])
+    ra_magnitude: int = config.get("ra_magnitude", hydra_cfg["ra_magnitude"])
+    ra_params = {  # binding random augment parameters
+        "num_ops": ra_num_ops,
+        "magnitude": ra_magnitude,
+    }
 
     # Initialize WandB
     if hydra_cfg.get("logging") is not None:
@@ -273,13 +280,13 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     train_dataset = CXRDataset(
         "train",
         **hydra_cfg.Dataset,
-        transforms=create_transforms(hydra_cfg.Dataset, "train", rotate_degree),
+        transforms=create_transforms(hydra_cfg.Dataset, "train", ra_params=ra_params),
         conditional_train=False,
     )
     val_dataset = CXRDataset(
         "valid",
         **hydra_cfg.Dataset,
-        transforms=create_transforms(hydra_cfg.Dataset, "valid", rotate_degree),
+        transforms=create_transforms(hydra_cfg.Dataset, "valid"),
         conditional_train=False,
     )
     train_loader = DataLoader(
@@ -291,6 +298,11 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
 
     model = model.to(device)
     loss_f = instantiate(hydra_cfg.loss)
+
+    # Changing AsymmetricLoss arguments
+    if hydra_cfg["loss"]["_target_"] == "custom_utils.asymmetric_loss.AsymmetricLoss":
+        loss_f.gamma_neg = asl_gamma_neg
+        loss_f.clip = asl_ps_factor
 
     if hydra_cfg.optimizer._target_.startswith("torch"):
         optimizer = instantiate(

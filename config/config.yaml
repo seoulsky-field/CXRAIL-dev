@@ -1,8 +1,11 @@
 #param_space:
-rotate_degree: 15
 lr: 0.0001
 batch_size: 32
 weight_decay: 0.0001 # 1e-4
+asl_gamma_neg: 2
+asl_ps_factor: 0.1
+ra_num_ops: 2
+ra_magnitude: 9
 
 ###user modifiable configs###
 ckpt_name: "best_saved.pth"

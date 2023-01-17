@@ -7,7 +7,7 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 
 
-def create_transforms(Dataset_cfg, mode, degree=15):
+def create_transforms(Dataset_cfg, mode, ra_params=None):
 
     image_size = Dataset_cfg.image_size
     augmentation_mode = Dataset_cfg.augmentation_mode
@@ -27,11 +27,12 @@ def create_transforms(Dataset_cfg, mode, degree=15):
                 ]
             )
         elif augmentation_mode == "random":
+            # https://pytorch.org/vision/stable/generated/torchvision.transforms.RandAugment.html
             train_transforms = tfs.Compose(
                 [
                     tfs.ToTensor(),
                     tfs.ConvertImageDtype(torch.uint8),
-                    tfs.RandAugment(),
+                    tfs.RandAugment(**ra_params),
                     tfs.ConvertImageDtype(torch.float32),
                     tfs.Resize((image_size, image_size)),
                     tfs.Normalize(
@@ -42,12 +43,13 @@ def create_transforms(Dataset_cfg, mode, degree=15):
         elif augmentation_mode == "custom":
             train_transforms = A.Compose(
                 [
-                    A.Affine(
-                        rotate=(-degree, degree),
-                        translate_percent=(0.05, 0.05),
-                        scale=(0.95, 1.05),
-                        cval=128,
-                    ),
+                    # Below is sample implementation of customized usage
+                    # A.Affine(
+                    #     rotate=(-degree, degree),
+                    #     translate_percent=(0.05, 0.05),
+                    #     scale=(0.95, 1.05),
+                    #     cval=128,
+                    # ),
                     # A.HorizontalFlip(),
                     # A.VerticalFlip(),
                     # A.Rotate(limit=90, border_mode=cv2.BORDER_CONSTANT,p=0.3),

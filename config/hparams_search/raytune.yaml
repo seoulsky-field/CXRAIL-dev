@@ -5,13 +5,33 @@ name: raytune
 param_space:
   lr:
     _target_: ray.tune.loguniform
-    lower: 0.0001
+    lower: 0.00001
+    upper: 0.1
+  weight_decay:
+    _target_: ray.tune.loguniform
+    lower: 0.00001
     upper: 0.1
   batch_size:
     _target_: ray.tune.choice
     categories:
-      - 64
       - 128
+      - 256
+  asl_gamma_neg:
+    _target_: ray.tune.uniform
+    lower: 1
+    upper: 5
+  asl_ps_factor:
+    _target_: ray.tune.uniform
+    lower: 0.05
+    upper: 0.25
+  ra_num_ops:
+    _target_: ray.tune.randint
+    lower: 2
+    upper: 14
+  ra_magnitude:
+    _target_: ray.tune.randint
+    lower: 5
+    upper: 20
 
 ### Tuner ####
 tune_config:
@@ -28,7 +48,7 @@ tune_config:
   #   mode: min
   #   grace_period: 5
 
-  num_samples: 3
+  num_samples: ${num_samples}
 
 run_config:
   _target_: ray.air.RunConfig

@@ -114,10 +114,7 @@ class CXRDataset(Dataset):
         # Limit train data size
         if self.mode == "train":
             if self.train_size is None:
-                print(
-                    f"What you give is [{self.train_size}], type [{type(self.train_size)}]"
-                )
-                pass
+                print("Using full data.")
             elif type(self.train_size) == int:
                 assert self.train_size >= 1 and self.train_size <= len(
                     self.df

@@ -7,8 +7,13 @@ setup:
 
 config:
   hparams_search: ${hparams_search.name}
-  batch_size: ${batch_size}
   lr: ${lr}
+  batch_size: ${batch_size}
+  weight_decay: ${weight_decay}
+  asl_gamma_neg: ${asl_gamma_neg}
+  asl_ps_factor: ${asl_ps_factor}
+  ra_num_ops: ${ra_num_ops}
+  ra_magnitude: ${ra_magnitude}
   model: ${model.model_name}
   optimizer: ${optimizer._target_}
   loss: ${loss._target_}

@@ -1,37 +1,12 @@
 #https://github1s.com/facebookresearch/hydra/blob/main/examples/patterns/multi-select/
 name: raytune
 
-# should set in default
-param_space:
-  lr:
-    _target_: ray.tune.loguniform
-    lower: 0.00001
-    upper: 0.1
-  weight_decay:
-    _target_: ray.tune.loguniform
-    lower: 0.00001
-    upper: 0.1
-  batch_size:
-    _target_: ray.tune.choice
-    categories:
-      - 128
-      - 256
-  asl_gamma_neg:
-    _target_: ray.tune.uniform
-    lower: 1
-    upper: 5
-  asl_ps_factor:
-    _target_: ray.tune.uniform
-    lower: 0.05
-    upper: 0.25
-  ra_num_ops:
-    _target_: ray.tune.randint
-    lower: 2
-    upper: 14
-  ra_magnitude:
-    _target_: ray.tune.randint
-    lower: 5
-    upper: 20
+tune_list:
+  batch_size: True
+  optimizer: True
+  loss: False
+  augmentation: False
+
 
 ### Tuner ####
 tune_config:
@@ -40,7 +15,7 @@ tune_config:
     _target_: ray.tune.search.hyperopt.HyperOptSearch
     metric: loss
     mode: min
-    random_state_seed: 12345 # seed for reproducible results
+    random_state_seed: ${seed} # seed for reproducible results
 
   # scheduler:
   #   _target_: ray.tune.schedulers.ASHAScheduler

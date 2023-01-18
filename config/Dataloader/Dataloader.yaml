@@ -1,24 +1,30 @@
 #### config/loader.yaml
 
 conditional_train:
-  batch_size: 64
+  batch_size: ${batch_size}
   num_workers: ${num_workers}
   drop_last: True
   shuffle: True
 
 train:
-  #batch_size: 128
+  _target_: torch.utils.data.DataLoader
+  dataset: 
+  batch_size: ${batch_size}
   num_workers: ${num_workers}
   drop_last: True
   shuffle: True
 
 valid:
-  #batch_size: 128
+  _target_: torch.utils.data.DataLoader
+  dataset: 
+  batch_size: ${batch_size}
   num_workers: ${num_workers}
   drop_last: False
   shuffle: False
 
 test:
+  _target_: torch.utils.data.DataLoader
+  dataset: 
   batch_size: ${batch_size}
   num_workers: ${num_workers}
   drop_last: False

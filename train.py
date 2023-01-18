@@ -57,6 +57,7 @@ from custom_utils.print_tree import print_config_tree
 from custom_utils.seed import seed_everything
 from custom_utils.conditional_train import c_trainval
 from custom_utils.custom_logger import TrainerLogger
+from setting import LoadExperimentSetting
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -224,9 +225,19 @@ def val(dataloader, model, loss_f, valid_progress):
 
     return val_loss, val_roc_auc, val_pred, val_true
 
+def load_dataset(hydra_cfg):
+    # Dataset
+    train_dataset = CXRDataset("train", **hydra_cfg.Dataset,)
+    val_dataset = CXRDataset("valid", **hydra_cfg.Dataset,)
+
+    train_loader = instantiate(hydra_cfg.DataLoader.train, dataset=train_dataset)
+    val_loader = instantiate(hydra_cfg.DataLoader.train, dataset=val_dataset)
+
+    return train_loader, val_loader
+
 
 def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
-
+    
     # conditional training
     if hydra_cfg.get("conditional_train") is not None:
         best_model_state = c_trainval(hydra_cfg, best_val_roc_auc=0)
@@ -237,19 +248,15 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
         model = instantiate(hydra_cfg.model)
 
     model = nn.DataParallel(model)  # Multi-GPU
+    model = model.to(device)
 
-    # search space
-    lr: float = config.get("lr", hydra_cfg["lr"])
-    weight_decay: float = config.get("weight_decay", hydra_cfg["lr"])
-    batch_size: int = config.get("batch_size", hydra_cfg["batch_size"])
-    asl_gamma_neg: int = config.get("asl_gamma_neg", hydra_cfg["asl_gamma_neg"])
-    asl_ps_factor: float = config.get("asl_ps_factor", hydra_cfg["asl_ps_factor"])
-    ra_num_ops: int = config.get("ra_num_ops", hydra_cfg["ra_num_ops"])
-    ra_magnitude: int = config.get("ra_magnitude", hydra_cfg["ra_magnitude"])
-    ra_params = {  # binding random augment parameters
-        "num_ops": ra_num_ops,
-        "magnitude": ra_magnitude,
-    }
+    # experiment setting
+    loader = LoadExperimentSetting(hydra_cfg, model)
+    train_loader, val_loader = loader.set_dataloader()
+    optimizer = loader.set_optimizer(mode='soft')
+    loss_f = loader.set_criterion()
+    search_space = loader.return_search_space()
+
 
     # Initialize WandB
     if hydra_cfg.get("logging") is not None:
@@ -276,49 +283,7 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     custom_logger = TrainerLogger(filePath=os.path.dirname(ckpt_path))
     logger = custom_logger.init_trainer_logger()
 
-    # Dataset
-    train_dataset = CXRDataset(
-        "train",
-        **hydra_cfg.Dataset,
-        transforms=create_transforms(hydra_cfg.Dataset, "train", ra_params=ra_params),
-        conditional_train=False,
-    )
-    val_dataset = CXRDataset(
-        "valid",
-        **hydra_cfg.Dataset,
-        transforms=create_transforms(hydra_cfg.Dataset, "valid"),
-        conditional_train=False,
-    )
-    train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.train
-    )
-    val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, **hydra_cfg.Dataloader.valid
-    )
-
-    model = model.to(device)
-    loss_f = instantiate(hydra_cfg.loss)
-
-    # Changing AsymmetricLoss arguments
-    if hydra_cfg["loss"]["_target_"] == "custom_utils.asymmetric_loss.AsymmetricLoss":
-        loss_f.gamma_neg = asl_gamma_neg
-        loss_f.clip = asl_ps_factor
-
-    if hydra_cfg.optimizer._target_.startswith("torch"):
-        optimizer = instantiate(
-            hydra_cfg.optimizer,
-            params=model.parameters(),
-            lr=lr,
-            weight_decay=weight_decay,
-        )
-    else:
-        optimizer = instantiate(
-            hydra_cfg.optimizer,
-            model=model,
-            loss_fn=loss_f,
-            lr=lr,
-            weight_decay=weight_decay,
-        )
+    
 
     # rich
     # label_progress = Progress(
@@ -405,6 +370,7 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     if hydra_cfg.get("logging") is not None:
         wandb.finish()
 
+    return search_space
 
 # @hydra.main(version_base=None, config_path="config", config_name="config")
 # def main(hydra_cfg: DictConfig):

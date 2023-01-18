@@ -2,19 +2,13 @@ import torch
 import torchvision.transforms as tfs
 import albumentations as A
 from albumentations.pytorch.transforms import ToTensorV2
-import hydra
-from omegaconf import DictConfig, OmegaConf
-from hydra.utils import instantiate
 
 
-def create_transforms(Dataset_cfg, mode, ra_params=None):
+def create_transforms(image_size, augmentation_mode, search_space={}):
 
-    image_size = Dataset_cfg.image_size
-    augmentation_mode = Dataset_cfg.augmentation_mode
-
-    if mode == "train":
+    if augmentation_mode:
         if augmentation_mode == "auto":
-            train_transforms = tfs.Compose(
+            augmented_transforms = tfs.Compose(
                 [
                     tfs.ToTensor(),
                     tfs.ConvertImageDtype(torch.uint8),
@@ -28,11 +22,14 @@ def create_transforms(Dataset_cfg, mode, ra_params=None):
             )
         elif augmentation_mode == "random":
             # https://pytorch.org/vision/stable/generated/torchvision.transforms.RandAugment.html
-            train_transforms = tfs.Compose(
+            num_ops = search_space.get('num_ops', 2)
+            magnitude = search_space.get('magnitude', 9)
+
+            augmented_transforms = tfs.Compose(
                 [
                     tfs.ToTensor(),
                     tfs.ConvertImageDtype(torch.uint8),
-                    tfs.RandAugment(**ra_params),
+                    tfs.RandAugment(num_ops, magnitude),
                     tfs.ConvertImageDtype(torch.float32),
                     tfs.Resize((image_size, image_size)),
                     tfs.Normalize(
@@ -41,7 +38,7 @@ def create_transforms(Dataset_cfg, mode, ra_params=None):
                 ]
             )
         elif augmentation_mode == "custom":
-            train_transforms = A.Compose(
+            augmented_transforms = A.Compose(
                 [
                     # Below is sample implementation of customized usage
                     # A.Affine(
@@ -66,9 +63,10 @@ def create_transforms(Dataset_cfg, mode, ra_params=None):
             )
         else:
             raise ValueError(f"Augmentation mode [{augmentation_mode}] is invalid")
-        return train_transforms
+        return augmented_transforms
+    
     else:
-        val_transforms = A.Compose(
+        default_transforms = A.Compose(
             [
                 A.Resize(image_size, image_size),
                 A.Normalize(
@@ -81,4 +79,4 @@ def create_transforms(Dataset_cfg, mode, ra_params=None):
                 ToTensorV2(),
             ]
         )
-        return val_transforms
+        return default_transforms

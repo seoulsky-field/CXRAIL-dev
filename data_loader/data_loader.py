@@ -7,6 +7,7 @@ import os
 from PIL import Image
 import pandas as pd
 
+from custom_utils.transform import create_transforms
 
 class CXRDataset(Dataset):
     """Image generator
@@ -22,7 +23,7 @@ class CXRDataset(Dataset):
         mode,
         dataset,
         labeler,
-        transforms,
+        #transforms,
         # hydra
         root_path,
         folder_path,
@@ -38,10 +39,11 @@ class CXRDataset(Dataset):
         train_size,
         label_smoothing,
         smooth_mode,
-        conditional_train,
         train_cols,
         enhance_cols,
         augmentation_mode,
+        augmentation_search_space={},
+        conditional_train = False
     ):
         self.dataset = dataset
         self.mode = mode
@@ -50,6 +52,7 @@ class CXRDataset(Dataset):
         self.root_path = root_path
         self.folder_path = folder_path
         self.labeler_path = labeler_path
+        self.dir_path = self.root_path + self.folder_path
 
         # columms
         self.train_cols = train_cols
@@ -57,7 +60,6 @@ class CXRDataset(Dataset):
 
         # setting
         self.seed = seed
-        self.image_size = image_size
         self.use_frontal = use_frontal
         self.use_enhancement = use_enhancement
         self.enhance_time = enhance_time
@@ -67,10 +69,8 @@ class CXRDataset(Dataset):
         self.conditional_train = conditional_train
         self.shuffle = shuffle
         self.verbose = verbose
-        self.transforms = transforms
-        self.dir_path = self.root_path + self.folder_path
         self.train_size = train_size
-        self.augmentation_mode = augmentation_mode
+        self.transforms = create_transforms(image_size, augmentation_mode, augmentation_search_space)
 
         # Choose Dataset
         if self.dataset == "CheXpert":
@@ -334,13 +334,13 @@ class CXRDataset(Dataset):
         image = cv2.imread(self._images_list[idx], 0)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        if self.transforms is not None:
-            try:
-                image = self.transforms(image=image)["image"]
-            except BaseException:
-                image = self.transforms(
-                    image
-                )  # Due to the torchvision transform format
+
+        try:
+            image = self.transforms(image=image)["image"]
+        except BaseException:
+            image = self.transforms(
+                image
+            )  # Due to the torchvision transform format
 
         if len(self.train_cols) > 1:  # multi-class mode
             label = np.array(self.targets[idx]).reshape(-1).astype(np.float32)

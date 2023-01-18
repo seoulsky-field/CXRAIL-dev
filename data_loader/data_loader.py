@@ -273,7 +273,6 @@ class CXRDataset(Dataset):
                 )
 
                 if self.verbose == 1:
-                    # print ('-'*30)
                     print(
                         "Found %s images in total, %s positive images, %s negative images"
                         % (
@@ -286,7 +285,6 @@ class CXRDataset(Dataset):
                         "%s(C): imbalance ratio is %.4f"
                         % (self.select_cols[0], self.imratio)
                     )
-                    # print ('-'*30)
             else:  # multi-label
                 imratio_list = []
 
@@ -310,7 +308,6 @@ class CXRDataset(Dataset):
                     imratio_list.append(imratio)
 
                     if self.verbose == 1:
-                        # print ('-'*30)
                         print(
                             "Found %s images in total, %s positive images, %s negative images"
                             % (
@@ -323,7 +320,7 @@ class CXRDataset(Dataset):
                             "%s(C%s): imbalance ratio is %.4f"
                             % (select_col, class_key, imratio)
                         )
-                        # print ('-'*30)
+
                 self.imratio = np.mean(imratio_list)
                 self.imratio_list = imratio_list
 

@@ -115,7 +115,7 @@ def train(
             loss, current = loss.item(), batch * len(data_X)
 
             val_loss, val_roc_auc, val_pred, val_true = val(
-                val_loader, model, loss_f, valid_progress
+                hydra_cfg, val_loader, model, loss_f, valid_progress
             )
 
             if best_val_roc_auc < val_roc_auc:
@@ -177,7 +177,7 @@ def train(
         epoch_progress.update(
             epoch_task_id,
             epoch=epoch + 1,
-            batch=batch + 1,
+            batch=batch,
             loss=loss,
             val_loss=val_loss,
             val_auc=val_roc_auc,
@@ -193,7 +193,7 @@ def train(
     return best_val_roc_auc, val_loss, val_roc_auc, stop_patience
 
 
-def val(dataloader, model, loss_f, valid_progress):
+def val(hydra_cfg, dataloader, model, loss_f, valid_progress):
     num_batches = len(dataloader)
     val_loss = 0
     valid_task_id = valid_progress.add_task(
@@ -222,7 +222,9 @@ def val(dataloader, model, loss_f, valid_progress):
         val_true_tensor = torch.from_numpy(val_true)
         val_pred_tensor = torch.from_numpy(val_pred)
 
-        auroc = MultilabelAUROC(num_labels=5, average="macro", thresholds=None)
+        auroc = MultilabelAUROC(
+            num_labels=hydra_cfg.num_classes, average="macro", thresholds=None
+        )
         auc_roc_scores = auroc(val_pred_tensor, val_true_tensor)
         val_roc_auc = float(torch.mean(auc_roc_scores))
         val_loss /= num_batches
@@ -239,7 +241,7 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
         best_model_state = c_trainval(hydra_cfg, best_val_roc_auc=0)
         model = instantiate(hydra_cfg.model)  # load best model
         model.load_state_dict(best_model_state)
-        model.reset_classifier(num_classes=5)
+        model.reset_classifier(num_classes=hydra_cfg.num_classes)
     else:
         model = instantiate(hydra_cfg.model)
 

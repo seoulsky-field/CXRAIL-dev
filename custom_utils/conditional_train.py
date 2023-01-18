@@ -56,7 +56,9 @@ def c_train(
 
         if batch % 500 == 0:
             loss, current = loss.item(), batch * len(data_X)
-            val_loss, val_roc_auc, val_pred, val_true = c_val(val_loader, model, loss_f)
+            val_loss, val_roc_auc, val_pred, val_true = c_val(
+                hydra_cfg, val_loader, model, loss_f
+            )
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
@@ -70,6 +72,7 @@ def c_train(
                 #     print("Best model saved.")
 
             report_metrics(val_pred, val_true, print_classification_result=False)
+
             print(
                 f"loss: {loss:>7f}, "
                 f"val_loss = {val_loss:>7f}, "
@@ -96,7 +99,7 @@ def c_train(
     return best_val_roc_auc, best_model_state
 
 
-def c_val(dataloader, model, loss_f):
+def c_val(hydra_cfg, dataloader, model, loss_f):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     val_loss = 0
@@ -121,7 +124,9 @@ def c_val(dataloader, model, loss_f):
         val_true_tensor = torch.from_numpy(val_true)
         val_pred_tensor = torch.from_numpy(val_pred)
 
-        auroc = MultilabelAUROC(num_labels=5, average="macro", thresholds=None)
+        auroc = MultilabelAUROC(
+            num_labels=hydra_cfg.num_classes, average="macro", thresholds=None
+        )
         auc_roc_scores = auroc(val_pred_tensor, val_true_tensor)
         val_roc_auc = torch.mean(auc_roc_scores).numpy()
 

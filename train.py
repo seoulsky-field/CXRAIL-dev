@@ -113,6 +113,7 @@ def train(
 
         if batch % 500 == 0:
             loss, current = loss.item(), batch * len(data_X)
+
             val_loss, val_roc_auc, val_pred, val_true = val(
                 val_loader, model, loss_f, valid_progress
             )
@@ -120,6 +121,7 @@ def train(
             if best_val_roc_auc < val_roc_auc:
                 stop_patience = 0
                 best_val_roc_auc = val_roc_auc
+
                 save_dict = {
                     "Dataset": hydra_cfg.get("Dataset")["dataset"],
                     "Optimizer": hydra_cfg.get("optimizer")["_target_"].split(".")[-1],
@@ -133,13 +135,16 @@ def train(
                 print("Best model saved.")
             else:
                 stop_patience += 1
+
                 if stop_patience == hydra_cfg.stop_patience:
                     print(
                         f"Stop patience reached: {stop_patience}/{hydra_cfg.stop_patience}"
                     )
+
                     return best_val_roc_auc, val_loss, val_roc_auc, stop_patience
 
             report_metrics(val_pred, val_true, print_classification_result=False)
+
             print(
                 f"loss: {loss:>7f}, "
                 f"val_loss = {val_loss:>7f}, "
@@ -161,8 +166,10 @@ def train(
 
             # log (default: wandB only, ray included: wandb, ray reporter)
             logger.info(result_metrics)
+
             if hydra_cfg.get("logging") is not None:
                 wandb.log(result_metrics)
+
             if hparam == "raytune":
                 result_metrics["progress_of_epoch"] = f"{100*current/size:.1f} %"
                 session.report(metrics=result_metrics)
@@ -254,17 +261,19 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
     # Initialize WandB
     if hydra_cfg.get("logging") is not None:
         wandb_cfg = OmegaConf.to_container(hydra_cfg.logging.config, resolve=True)
+
     if hparam == "none":
         ckpt_path = os.path.join(hydra_cfg.save_dir, hydra_cfg.ckpt_name)
         if hydra_cfg.get("logging") is not None:
             wandb.init(**hydra_cfg.logging.setup, config=wandb_cfg)
-
     elif hparam == "raytune":
         ckpt_path = hydra_cfg.ckpt_name
         logdir = session.get_trial_dir()
+
         if hydra_cfg.get("logging") is not None:
             with open(logdir + "params.pkl", "rb") as f:
                 params = pickle.load(f)
+
             wandb_cfg = {key: params.get(key, wandb_cfg[key]) for key in wandb_cfg}
 
             wandb_r = setup_wandb(
@@ -319,12 +328,6 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
             lr=lr,
             weight_decay=weight_decay,
         )
-
-    # rich
-    # label_progress = Progress(
-    #     TimeElapsedColumn(),
-    #     TextColumn('{task.description}')
-    # )
 
     epoch_progress = Progress(
         TextColumn("[bold blue] Training epoch {task.fields[epoch]}: "),
@@ -404,19 +407,3 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
 
     if hydra_cfg.get("logging") is not None:
         wandb.finish()
-
-
-# @hydra.main(version_base=None, config_path="config", config_name="config")
-# def main(hydra_cfg: DictConfig):
-#     config = hydra_cfg
-#     seed_everything(hydra_cfg.seed)
-
-#     if hydra_cfg.get("print_config"):
-#         # log.info("Printing config tree with Rich! <cfg.extras.print_config=True>")
-#         print_config_tree(hydra_cfg, resolve=True, save_to_file=True)
-
-#     trainval(config, hydra_cfg)
-
-
-# if __name__ == "__main__":
-#     main()

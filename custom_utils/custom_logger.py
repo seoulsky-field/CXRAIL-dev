@@ -14,7 +14,6 @@ class Logger:
         if self.filePath is None:
             if self.mode == "train":
                 self.filePath = "./logs/checkpoints"
-
             elif self.mode == "test":
                 self.filePath = "./logs/inference"
         else:
@@ -37,7 +36,6 @@ class Logger:
 
         if self.mode == "train":
             save_path = os.path.abspath(f"{self.filePath}/checkpoint_path.yaml")
-
         elif self.mode == "test":
             save_path = os.path.abspath(f"{self.filePath}/test_result.yaml")
 

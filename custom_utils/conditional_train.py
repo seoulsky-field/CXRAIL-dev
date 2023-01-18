@@ -49,6 +49,7 @@ def c_train(
         pred = model(data_X)
         # pred = torch.sigmoid(pred) # for multi-label
         loss = loss_f(pred, label_y)
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -99,25 +100,33 @@ def c_val(dataloader, model, loss_f):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     val_loss = 0
+
     model.eval()
     with torch.no_grad():
         val_pred = []
         val_true = []
+
         for X, y in dataloader:
             X, y = X.to(device), y.to(device)
             pred = model(X)
             # pred = torch.sigmoid(pred)
+
             val_loss += loss_f(pred, y).item()
             val_pred.append(pred.cpu().detach().numpy())
             val_true.append(y.cpu().numpy())
+
         val_true = np.concatenate(val_true)
         val_pred = np.concatenate(val_pred)
+
         val_true_tensor = torch.from_numpy(val_true)
         val_pred_tensor = torch.from_numpy(val_pred)
+
         auroc = MultilabelAUROC(num_labels=5, average="macro", thresholds=None)
         auc_roc_scores = auroc(val_pred_tensor, val_true_tensor)
         val_roc_auc = torch.mean(auc_roc_scores).numpy()
+
         val_loss /= num_batches
+
     return val_loss, val_roc_auc, val_pred, val_true
 
 
@@ -135,6 +144,7 @@ def c_trainval(hydra_cfg, best_val_roc_auc=0):
     condition_train_loader = DataLoader(
         condition_train_dataset, **hydra_cfg.Dataloader.conditional_train
     )
+
     val_dataset = CXRDataset(
         "valid",
         **hydra_cfg.Dataset,
@@ -142,9 +152,11 @@ def c_trainval(hydra_cfg, best_val_roc_auc=0):
         conditional_train=False,
     )
     val_loader = DataLoader(val_dataset, **hydra_cfg.Dataloader.test)
+
     model_ct = instantiate(cfg.model)
     model_ct = model_ct.to(device)
     loss_f_ct = instantiate(cfg.loss)
+
     if cfg.optimizer._target_.startswith("torch"):
         optimizer_ct = instantiate(
             cfg.optimizer,
@@ -164,6 +176,7 @@ def c_trainval(hydra_cfg, best_val_roc_auc=0):
     print("#############################################")
     print("########## Conditional-Train Start ##########")
     print("#############################################")
+
     for epoch in range(cfg.epochs):
         best_val_roc_auc, best_model_state = c_train(
             hydra_cfg.conditional_train,
@@ -175,6 +188,7 @@ def c_trainval(hydra_cfg, best_val_roc_auc=0):
             epoch,
             best_val_roc_auc,
         )
+
     print("#############################################")
     print("########### Conditional-Train End ###########")
     print("#############################################")

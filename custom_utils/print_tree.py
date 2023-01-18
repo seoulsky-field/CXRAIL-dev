@@ -7,9 +7,11 @@ import rich.syntax
 import rich.tree
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf, open_dict
-#from pytorch_lightning.utilities import rank_zero_only
+
+# from pytorch_lightning.utilities import rank_zero_only
 
 log = logging.getLogger(__name__)
+
 
 def print_config_tree(
     cfg: DictConfig,
@@ -41,20 +43,17 @@ def print_config_tree(
         queue.append(field) if field in cfg else log.warning(
             f"Field '{field}' not found in config. Skipping '{field}' config printing..."
         )
-        # print(field)
-        # queue.append(field) if field in cfg else print('Field not found')
 
     # add all the other fields to queue (not specified in `print_order`)
     for field in cfg:
         print(field)
-        # if field not in queue:
-        #     queue.append(field)
 
     # generate config tree from queue
     for field in queue:
         branch = tree.add(field, style=style, guide_style=style)
 
         config_group = cfg[field]
+
         if isinstance(config_group, DictConfig):
             branch_content = OmegaConf.to_yaml(config_group, resolve=resolve)
         else:

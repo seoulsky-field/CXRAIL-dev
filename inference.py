@@ -97,8 +97,10 @@ def predict(hydra_cfg, model, test_loader, train_columns):
 
         if hydra_cfg.save_auroc_plot:
             plot_save_dir = os.path.join(hydra_cfg.log_dir, "images")
+
             if not os.path.exists(plot_save_dir):
                 os.mkdir(plot_save_dir)
+
             for idx in range(hydra_cfg.num_classes):
                 auroc_reporter.plot_class_auroc_details(
                     targets=test_true[:, idx],
@@ -197,6 +199,7 @@ def save_result_csv(report_configs, hydra_cfg, train_columns):
     save_path = os.path.join(hydra_cfg.log_dir, "inference_result.csv")
     result_df.to_csv(save_path, index=True)
     print(result_df)
+
     return result_df
 
 
@@ -215,10 +218,12 @@ def main(hydra_cfg: DictConfig):
 
     test_score = []
     report_configs_dict = []
+
     for log_dir, check_point_path in check_point_paths.items():
 
         test_dataset = load_dataset(hydra_cfg, check_point_path)
         test_loader = DataLoader(test_dataset, **hydra_cfg.Dataloader.test)
+
         model, report_configs = load_model(hydra_cfg, check_point_path)
 
         dataset_name = report_configs["Dataset"]
@@ -235,8 +240,10 @@ def main(hydra_cfg: DictConfig):
         report_configs["log_dir"] = log_dir
         report_configs["test_roc_auc"] = macro_auroc_score
         report_configs["micro_roc_auc"] = micro_auroc_score
+
         for class_name, score in zip(train_columns, class_auroc_score):
             report_configs[class_name] = score
+
         report_configs["log_dir"] = log_dir
         report_configs_dict.append(report_configs)
 
@@ -244,6 +251,7 @@ def main(hydra_cfg: DictConfig):
         logger.info("%s: %s", log_dir, macro_auroc_score)
 
     result_df = save_result_csv(report_configs_dict, hydra_cfg, train_columns)
+
     return test_score
 
 

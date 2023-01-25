@@ -22,7 +22,7 @@ from ray.air.checkpoint import Checkpoint
 from ray.air.config import ScalingConfig
 
 # 내부 모듈
-from custom_utils.custom_metrics import report_metrics
+from custom_utils.custom_metrics import AUROCMetricReporter
 from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
 from data_loader.data_loader import CXRDataset
@@ -71,8 +71,6 @@ def c_train(
                 #     torch.save(model.state_dict(), hydra_cfg.ckpt_name)
                 #     print("Best model saved.")
 
-            report_metrics(val_pred, val_true, print_classification_result=False)
-
             print(
                 f"loss: {loss:>7f}, "
                 f"val_loss = {val_loss:>7f}, "
@@ -113,23 +111,18 @@ def c_val(hydra_cfg, dataloader, model, loss_f):
             X, y = X.to(device), y.to(device)
             pred = model(X)
             # pred = torch.sigmoid(pred)
-
             val_loss += loss_f(pred, y).item()
+
             val_pred.append(pred.cpu().detach().numpy())
             val_true.append(y.cpu().numpy())
 
         val_true = np.concatenate(val_true)
         val_pred = np.concatenate(val_pred)
 
-        val_true_tensor = torch.from_numpy(val_true)
-        val_pred_tensor = torch.from_numpy(val_pred)
-
-        auroc = MultilabelAUROC(
-            num_labels=hydra_cfg.num_classes, average="macro", thresholds=None
+        auroc_reporter = AUROCMetricReporter(
+            hydra_cfg=hydra_cfg, preds=val_pred, targets=val_true
         )
-        auc_roc_scores = auroc(val_pred_tensor, val_true_tensor)
-        val_roc_auc = torch.mean(auc_roc_scores).numpy()
-
+        val_roc_auc = auroc_reporter.get_macro_auroc_score()
         val_loss /= num_batches
 
     return val_loss, val_roc_auc, val_pred, val_true

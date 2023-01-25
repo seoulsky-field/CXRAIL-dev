@@ -48,8 +48,7 @@ from rich.progress import DownloadColumn, TransferSpeedColumn, TimeRemainingColu
 from rich.rule import Rule
 
 # 내부 모듈
-from custom_utils.custom_metrics import *
-from custom_utils.custom_metrics import report_metrics
+from custom_utils.custom_metrics import AUROCMetricReporter
 from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
 from data_loader.data_loader import CXRDataset
@@ -143,8 +142,6 @@ def train(
 
                     return best_val_roc_auc, val_loss, val_roc_auc, stop_patience
 
-            report_metrics(val_pred, val_true, print_classification_result=False)
-
             print(
                 f"loss: {loss:>7f}, "
                 f"val_loss = {val_loss:>7f}, "
@@ -219,14 +216,10 @@ def val(hydra_cfg, dataloader, model, loss_f, valid_progress):
         val_true = np.concatenate(val_true)
         val_pred = np.concatenate(val_pred)
 
-        val_true_tensor = torch.from_numpy(val_true)
-        val_pred_tensor = torch.from_numpy(val_pred)
-
-        auroc = MultilabelAUROC(
-            num_labels=hydra_cfg.num_classes, average="macro", thresholds=None
+        auroc_reporter = AUROCMetricReporter(
+            hydra_cfg=hydra_cfg, preds=val_pred, targets=val_true
         )
-        auc_roc_scores = auroc(val_pred_tensor, val_true_tensor)
-        val_roc_auc = float(torch.mean(auc_roc_scores))
+        val_roc_auc = auroc_reporter.get_macro_auroc_score()
         val_loss /= num_batches
 
     valid_progress.update(valid_task_id, visible=False)

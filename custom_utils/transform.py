@@ -27,7 +27,7 @@ def create_transforms(Dataset_cfg, mode, ra_params=None):
                 ]
             )
         elif augmentation_mode == "random":
-            # https://pytorch.org/vision/stable/generated/torchvision.transforms.RandAugment.html
+            # Reference: https://pytorch.org/vision/stable/generated/torchvision.transforms.RandAugment.html
             train_transforms = tfs.Compose(
                 [
                     tfs.ToTensor(),
@@ -66,7 +66,9 @@ def create_transforms(Dataset_cfg, mode, ra_params=None):
             )
         else:
             raise ValueError(f"Augmentation mode [{augmentation_mode}] is invalid")
+
         return train_transforms
+
     else:
         val_transforms = A.Compose(
             [
@@ -81,4 +83,5 @@ def create_transforms(Dataset_cfg, mode, ra_params=None):
                 ToTensorV2(),
             ]
         )
+
         return val_transforms

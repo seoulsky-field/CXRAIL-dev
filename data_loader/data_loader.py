@@ -105,10 +105,13 @@ class CXRDataset(Dataset):
         if self.use_enhancement:
             # assert isinstance(self.enhance_cols, list), "Input should be list!" # This assertion is deprecated due to the usage of hydra
             sampled_df_list = []
+
             for col in self.enhance_cols:
                 print("Upsampling %s..." % col)
+
                 for times in range(self.enhance_time):
                     sampled_df_list.append(self.df[self.df[col] == 1])
+
             self.df = pd.concat([self.df] + sampled_df_list, axis=0)
 
         # Limit train data size
@@ -119,6 +122,7 @@ class CXRDataset(Dataset):
                 assert self.train_size >= 1 and self.train_size <= len(
                     self.df
                 ), f"Integer [{self.train_size}] is out of range. For your train set, it must be in the range of 1 <= x <= {len(self.df)}"
+
                 self.df = self.df.sample(
                     n=self.train_size, replace=False, random_state=self.seed
                 )
@@ -126,6 +130,7 @@ class CXRDataset(Dataset):
                 assert (
                     self.train_size > 0 and self.train_size <= 1
                 ), f"Float [{self.train_size}] is out of range. For your train set, it must be in the range of 0 < x <= 1"
+
                 self.df = self.df.sample(
                     frac=self.train_size, replace=False, random_state=self.seed
                 )
@@ -143,6 +148,7 @@ class CXRDataset(Dataset):
         # value mapping (policy)
         for col in self.df.columns.values:
             self.df[col].fillna(0, inplace=True)
+
             if col in ["Edema", "Atelectasis"]:
                 if self.label_smoothing is True:
                     self.df[col] = self.df[col].apply(
@@ -214,8 +220,10 @@ class CXRDataset(Dataset):
         # shuffle data
         if self.shuffle:
             data_index = list(range(self._num_images))
+
             np.random.seed(self.seed)
             np.random.shuffle(data_index)
+
             self.df = self.df.iloc[data_index]
 
         # multi-label or one-label
@@ -228,8 +236,10 @@ class CXRDataset(Dataset):
                     % len(self.train_cols)
                 )
                 print("-" * 30)
+
             self.select_cols = self.train_cols
             self.value_counts_dict = {}
+
             for class_key, select_col in enumerate(self.train_cols):
                 class_value_counts_dict = self.df[select_col].value_counts().to_dict()
                 self.value_counts_dict[class_key] = class_value_counts_dict
@@ -237,12 +247,14 @@ class CXRDataset(Dataset):
             self.select_cols = [
                 self.train_cols[0]
             ]  # this var determines the number of classes
+
             self.value_counts_dict = (
                 self.df[self.select_cols[0]].value_counts().to_dict()
             )
 
         # image, target
         self._images_list = [self.root_path + path for path in self.df["Path"].tolist()]
+
         if len(self.train_cols) == 1:
             self.targets = self.df[self.train_cols[0]].values[:].tolist()
         else:
@@ -255,11 +267,12 @@ class CXRDataset(Dataset):
                     negtive_value = -1
                 else:
                     negtive_value = 0
+
                 self.imratio = self.value_counts_dict[1] / (
                     self.value_counts_dict[negtive_value] + self.value_counts_dict[1]
                 )
+
                 if self.verbose == 1:
-                    # print ('-'*30)
                     print(
                         "Found %s images in total, %s positive images, %s negative images"
                         % (
@@ -272,9 +285,9 @@ class CXRDataset(Dataset):
                         "%s(C): imbalance ratio is %.4f"
                         % (self.select_cols[0], self.imratio)
                     )
-                    # print ('-'*30)
             else:  # multi-label
                 imratio_list = []
+
                 for class_key, select_col in enumerate(self.train_cols):
                     try:
                         imratio = self.value_counts_dict[class_key][1] / (
@@ -284,6 +297,7 @@ class CXRDataset(Dataset):
                     except BaseException:  # if all labels are consist of one value
                         if len(self.value_counts_dict[class_key]) == 1:
                             only_key = list(self.value_counts_dict[class_key].keys())[0]
+
                             if only_key == 0:
                                 self.value_counts_dict[class_key][1] = 0
                                 imratio = 0  # no postive samples
@@ -292,8 +306,8 @@ class CXRDataset(Dataset):
                                 imratio = 1  # no negative samples
 
                     imratio_list.append(imratio)
+
                     if self.verbose == 1:
-                        # print ('-'*30)
                         print(
                             "Found %s images in total, %s positive images, %s negative images"
                             % (
@@ -306,7 +320,7 @@ class CXRDataset(Dataset):
                             "%s(C%s): imbalance ratio is %.4f"
                             % (select_col, class_key, imratio)
                         )
-                        # print ('-'*30)
+
                 self.imratio = np.mean(imratio_list)
                 self.imratio_list = imratio_list
 
@@ -346,4 +360,5 @@ class CXRDataset(Dataset):
             label = np.array(self.targets[idx]).reshape(-1).astype(np.float32)
         else:
             label = np.array(self.targets[idx]).reshape(-1).astype(np.float32)
+
         return image, label

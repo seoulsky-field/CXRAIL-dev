@@ -22,7 +22,7 @@ from ray.air.checkpoint import Checkpoint
 from ray.air.config import ScalingConfig
 
 # 내부 모듈
-from custom_utils.custom_metrics import report_metrics
+from custom_utils.custom_metrics import AUROCMetricReporter
 from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
 from data_loader.data_loader import CXRDataset
@@ -49,13 +49,16 @@ def c_train(
         pred = model(data_X)
         # pred = torch.sigmoid(pred) # for multi-label
         loss = loss_f(pred, label_y)
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         if batch % 500 == 0:
             loss, current = loss.item(), batch * len(data_X)
-            val_loss, val_roc_auc, val_pred, val_true = c_val(val_loader, model, loss_f)
+            val_loss, val_roc_auc, val_pred, val_true = c_val(
+                hydra_cfg, val_loader, model, loss_f
+            )
 
             if best_val_roc_auc < val_roc_auc:
                 best_val_roc_auc = val_roc_auc
@@ -68,7 +71,6 @@ def c_train(
                 #     torch.save(model.state_dict(), hydra_cfg.ckpt_name)
                 #     print("Best model saved.")
 
-            report_metrics(val_pred, val_true, print_classification_result=False)
             print(
                 f"loss: {loss:>7f}, "
                 f"val_loss = {val_loss:>7f}, "
@@ -95,29 +97,34 @@ def c_train(
     return best_val_roc_auc, best_model_state
 
 
-def c_val(dataloader, model, loss_f):
+def c_val(hydra_cfg, dataloader, model, loss_f):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     val_loss = 0
+
     model.eval()
     with torch.no_grad():
         val_pred = []
         val_true = []
+
         for X, y in dataloader:
             X, y = X.to(device), y.to(device)
             pred = model(X)
             # pred = torch.sigmoid(pred)
             val_loss += loss_f(pred, y).item()
+
             val_pred.append(pred.cpu().detach().numpy())
             val_true.append(y.cpu().numpy())
+
         val_true = np.concatenate(val_true)
         val_pred = np.concatenate(val_pred)
-        val_true_tensor = torch.from_numpy(val_true)
-        val_pred_tensor = torch.from_numpy(val_pred)
-        auroc = MultilabelAUROC(num_labels=5, average="macro", thresholds=None)
-        auc_roc_scores = auroc(val_pred_tensor, val_true_tensor)
-        val_roc_auc = torch.mean(auc_roc_scores).numpy()
+
+        auroc_reporter = AUROCMetricReporter(
+            hydra_cfg=hydra_cfg, preds=val_pred, targets=val_true
+        )
+        val_roc_auc = auroc_reporter.get_macro_auroc_score()
         val_loss /= num_batches
+
     return val_loss, val_roc_auc, val_pred, val_true
 
 
@@ -135,6 +142,7 @@ def c_trainval(hydra_cfg, best_val_roc_auc=0):
     condition_train_loader = DataLoader(
         condition_train_dataset, **hydra_cfg.Dataloader.conditional_train
     )
+
     val_dataset = CXRDataset(
         "valid",
         **hydra_cfg.Dataset,
@@ -142,9 +150,11 @@ def c_trainval(hydra_cfg, best_val_roc_auc=0):
         conditional_train=False,
     )
     val_loader = DataLoader(val_dataset, **hydra_cfg.Dataloader.test)
+
     model_ct = instantiate(cfg.model)
     model_ct = model_ct.to(device)
     loss_f_ct = instantiate(cfg.loss)
+
     if cfg.optimizer._target_.startswith("torch"):
         optimizer_ct = instantiate(
             cfg.optimizer,
@@ -164,6 +174,7 @@ def c_trainval(hydra_cfg, best_val_roc_auc=0):
     print("#############################################")
     print("########## Conditional-Train Start ##########")
     print("#############################################")
+
     for epoch in range(cfg.epochs):
         best_val_roc_auc, best_model_state = c_train(
             hydra_cfg.conditional_train,
@@ -175,6 +186,7 @@ def c_trainval(hydra_cfg, best_val_roc_auc=0):
             epoch,
             best_val_roc_auc,
         )
+
     print("#############################################")
     print("########### Conditional-Train End ###########")
     print("#############################################")

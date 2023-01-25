@@ -43,6 +43,16 @@ def create_transforms(Dataset_cfg, mode, ra_params=None):
         elif augmentation_mode == "custom":
             train_transforms = A.Compose(
                 [
+                    # Below is sample implementation of customized usage
+                    # A.Affine(
+                    #     rotate=(-degree, degree),
+                    #     translate_percent=(0.05, 0.05),
+                    #     scale=(0.95, 1.05),
+                    #     cval=128,
+                    # ),
+                    # A.HorizontalFlip(),
+                    # A.VerticalFlip(),
+                    # A.Rotate(limit=90, border_mode=cv2.BORDER_CONSTANT,p=0.3),
                     A.Resize(image_size, image_size),
                     A.Normalize(
                         mean=(0.485, 0.456, 0.406),

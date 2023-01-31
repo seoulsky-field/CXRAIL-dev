@@ -17,12 +17,15 @@ class TestMetricsReporter:
         self.targets = targets
         self.hydra_cfg = hydra_cfg
         self.target_columns = target_columns
-        self.save_dir = os.path.join(hydra_cfg.log_dir, "images")
 
 
 class AUROCMetricReporter(TestMetricsReporter):
-    def __init__(self, hydra_cfg, preds, targets, target_columns=None):
+    def __init__(self, hydra_cfg, preds, targets, mode, target_columns=None):
         super().__init__(hydra_cfg, preds, targets, target_columns)
+        self.mode = mode
+
+        if self.mode != "train":
+            self.save_dir = os.path.join(hydra_cfg.log_dir, "images")
 
     def get_class_auroc_score(self):
         return roc_auc_score(self.targets, self.preds, average=None)

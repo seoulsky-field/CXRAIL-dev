@@ -73,6 +73,7 @@ def predict(hydra_cfg, model, test_loader, train_columns):
             preds=test_pred,
             targets=test_true,
             target_columns=train_columns,
+            mode="test",
         )
 
         micro_auroc_score = round(auroc_reporter.get_micro_auroc_score(), 4)

@@ -3,6 +3,8 @@ import torch.nn as nn
 
 
 class AsymmetricLoss(nn.Module):
+    """Notice - To consider label smoothing, calculating process is changed"""
+
     def __init__(
         self,
         gamma_neg=4,
@@ -39,24 +41,16 @@ class AsymmetricLoss(nn.Module):
         # Basic CE calculation
         los_pos = y * torch.log(xs_pos.clamp(min=self.eps))
         los_neg = (1 - y) * torch.log(xs_neg.clamp(min=self.eps))
-        loss = los_pos + los_neg
 
         # Asymmetric Focusing
         if self.gamma_neg > 0 or self.gamma_pos > 0:
-            if self.disable_torch_grad_focal_loss:
-                torch.set_grad_enabled(False)
+            w_pos = torch.pow(1 - xs_pos, self.gamma_pos)
+            w_neg = torch.pow(1 - xs_neg, self.gamma_neg)
 
-            pt0 = xs_pos * y
-            pt1 = xs_neg * (1 - y)  # pt = p if t > 0 else 1-p
-            pt = pt0 + pt1
+            los_pos = w_pos*los_pos
+            los_neg = w_neg*los_neg
 
-            one_sided_gamma = self.gamma_pos * y + self.gamma_neg * (1 - y)
-            one_sided_w = torch.pow(1 - pt, one_sided_gamma)
-
-            if self.disable_torch_grad_focal_loss:
-                torch.set_grad_enabled(True)
-
-            loss *= one_sided_w
+        loss = los_pos + los_neg
 
         return -loss.sum()
 

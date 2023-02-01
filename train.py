@@ -14,7 +14,6 @@ import torch.optim as optim
 from torch.cuda.amp import GradScaler
 from torch.utils.data import DataLoader
 from libauc.metrics import auc_roc_score
-from torchmetrics.classification import MultilabelAUROC
 
 # hydra
 import logging
@@ -53,7 +52,6 @@ from custom_utils.custom_reporter import *
 from custom_utils.transform import create_transforms
 from data_loader.data_loader import CXRDataset
 from custom_utils.print_tree import print_config_tree
-from custom_utils.seed import seed_everything
 from custom_utils.conditional_train import c_trainval
 from custom_utils.custom_logger import TrainerLogger
 
@@ -217,7 +215,7 @@ def val(hydra_cfg, dataloader, model, loss_f, valid_progress):
         val_pred = np.concatenate(val_pred)
 
         auroc_reporter = AUROCMetricReporter(
-            hydra_cfg=hydra_cfg, preds=val_pred, targets=val_true
+            hydra_cfg=hydra_cfg, preds=val_pred, targets=val_true, mode="train"
         )
         val_roc_auc = auroc_reporter.get_macro_auroc_score()
         val_loss /= num_batches

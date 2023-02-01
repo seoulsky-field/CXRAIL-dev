@@ -50,7 +50,7 @@ def c_val(hydra_cfg, dataloader, model, loss_f, num_classes):
         val_pred = np.concatenate(val_pred)
 
         auroc_reporter = AUROCMetricReporter(
-            hydra_cfg=hydra_cfg, preds=val_pred, targets=val_true
+            hydra_cfg=hydra_cfg, preds=val_pred, targets=val_true, mode="train"
         )
         val_roc_auc = auroc_reporter.get_macro_auroc_score()
         val_loss /= num_batches
@@ -62,12 +62,11 @@ def c_trainval(hydra_cfg, logger, best_val_roc_auc=0):
 
     num_classes = hydra_cfg.num_classes
 
-    ra_params = {"num_ops": hydra_cfg.ra_num_ops, "magnitude": hydra_cfg.ra_magnitude}
 
     train_dataset = CXRDataset(
         "train",
         **hydra_cfg.Dataset,
-        transforms=create_transforms(hydra_cfg.Dataset, "train", ra_params=ra_params),
+        transforms=create_transforms(hydra_cfg.Dataset, "train", conditional=True),
         conditional_train=True,
     )
     val_dataset = CXRDataset(

@@ -1,10 +1,10 @@
 #### config/loader.yaml
 
-conditional_train:
-  batch_size: 64
-  num_workers: ${num_workers}
-  drop_last: True
-  shuffle: True
+# conditional_train:
+#   batch_size: 64
+#   num_workers: ${num_workers}
+#   drop_last: True
+#   shuffle: True
 
 train:
   #batch_size: 128

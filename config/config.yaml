@@ -44,9 +44,8 @@ defaults:
   - model: densenet             # Select training model. 'resnet': ResNet50, 'densenet': DenseNet121, 'swin_transformer': swinv2_small_224
   - hparams_search: none
   - logging: null
-  - conditional_train: null     # Conditional training option. 'conditional' or 'null'
+  - extras: default
 
 ####experimental
-print_config: False
 use_amp: True # Automatic mixed precision option. True or False
 stop_patience: 5

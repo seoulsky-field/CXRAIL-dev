@@ -7,13 +7,13 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.utils import instantiate
 
 
-def create_transforms(Dataset_cfg, mode, ra_params=None):
+def create_transforms(Dataset_cfg, mode, ra_params=None, conditional=False):
 
     image_size = Dataset_cfg.image_size
     augmentation_mode = Dataset_cfg.augmentation_mode
 
     if mode == "train":
-        if augmentation_mode == "auto":
+        if augmentation_mode == "auto" or conditional == True:
             train_transforms = tfs.Compose(
                 [
                     tfs.ToTensor(),

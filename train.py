@@ -227,17 +227,6 @@ def val(hydra_cfg, dataloader, model, loss_f, valid_progress):
 
 def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
 
-    # conditional training
-    if hydra_cfg.get("conditional_train") is not None:
-        best_model_state = c_trainval(hydra_cfg, best_val_roc_auc=0)
-        model = instantiate(hydra_cfg.model)  # load best model
-        model.load_state_dict(best_model_state)
-        model.reset_classifier(num_classes=hydra_cfg.num_classes)
-    else:
-        model = instantiate(hydra_cfg.model)
-
-    model = nn.DataParallel(model)  # Multi-GPU
-
     # search space
     lr: float = config.get("lr", hydra_cfg["lr"])
     weight_decay: float = config.get("weight_decay", hydra_cfg["lr"])
@@ -277,6 +266,18 @@ def trainval(config, hydra_cfg, hparam, best_val_roc_auc=0):
 
     custom_logger = TrainerLogger(filePath=os.path.dirname(ckpt_path))
     logger = custom_logger.init_trainer_logger()
+
+
+    # conditional training
+    if hydra_cfg.get("conditional_train") or hydra_cfg.extras.get("conditional_train"):
+        conditional_weight = c_trainval(hydra_cfg, logger, best_val_roc_auc=0)
+        model = instantiate(hydra_cfg.model)  
+        model.load_state_dict(conditional_weight)
+        model.reset_classifier(num_classes=hydra_cfg.num_classes)
+    else:
+        model = instantiate(hydra_cfg.model)
+
+    model = nn.DataParallel(model)  # Multi-GPU
 
     # Dataset
     train_dataset = CXRDataset(

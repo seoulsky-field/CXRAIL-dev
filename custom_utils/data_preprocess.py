@@ -5,7 +5,7 @@ import subprocess
 
 # Preprocssing functions
 def upzip_csv(root_dir):
-    file_nms = ["chexpert.csv", "metadata.csv", "negbio.csv", "split.csv"]
+    file_nms = ["chexpert.csv.gz", "metadata.csv.gz", "negbio.csv.gz", "split.csv.gz"]
     mimic_version = root_dir.split("/")[-2]
     for file_nm in file_nms:
         try:

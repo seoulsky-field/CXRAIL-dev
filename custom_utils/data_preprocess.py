@@ -4,7 +4,7 @@ import os
 import subprocess
 
 # Preprocssing functions
-def upzip_csv(root_dir):
+def unzip_csv(root_dir):
     file_nms = ["chexpert.csv.gz", "metadata.csv.gz", "negbio.csv.gz", "split.csv.gz"]
     mimic_version = root_dir.split("/")[-2]
     for file_nm in file_nms:
@@ -14,7 +14,7 @@ def upzip_csv(root_dir):
             continue
 
 def get_merged_csv(root_dir, labeling_method):
-    upzip_csv(root_dir=root_dir)
+    unzip_csv(root_dir=root_dir)
 
     target_label_df = pd.read_csv(os.path.join(root_dir, f'mimic-cxr-2.0.0-{labeling_method}.csv'))
     metadata_df = pd.read_csv(os.path.join(root_dir, 'mimic-cxr-2.0.0-metadata.csv'))

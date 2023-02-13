@@ -143,6 +143,8 @@ def load_dataset(hydra_cfg, check_point_path):
 
 def load_hydra_config(check_point_path):
 
+    # load config
+    ## define path
     if "trainval" in check_point_path:
         # ray logging file structure
         config_yaml = check_point_path.split("trainval")[0] + ".hydra/config.yaml"
@@ -155,6 +157,7 @@ def load_hydra_config(check_point_path):
             check_point_path.split("best_saved.pth")[0] + ".hydra/overrides.yaml"
         )
 
+    ## load yaml
     with open(config_yaml) as f:
         config_ = yaml.load(f, Loader=yaml.FullLoader)
     with open(hydra_yaml) as f:
@@ -163,7 +166,7 @@ def load_hydra_config(check_point_path):
         override_ = yaml.load(f, Loader=yaml.FullLoader)
 
     hydra_config = hydra_["hydra"]["runtime"]["choices"]
-    multirun_config = "\n".join(s for s in override_)
+    #multirun_config = "\n".join(s for s in override_)
 
     report_configs = {
         "epoch": config_.get("epochs", "None"),
@@ -172,8 +175,46 @@ def load_hydra_config(check_point_path):
         "loss_func": hydra_config.get("loss", "None"),
         "Optimizer": hydra_config.get("optimizer", "None"),
         "Dataset": hydra_config.get("Dataset", "None"),
-        "Multirun": multirun_config,
+        "Multirun": dict(),
+        "Override": dict(),
     }
+
+    # override check
+    for ov in override_:
+        print(ov)
+
+        #override_dic = {'Dataset' : {'train_size': 1000, 'root_path': '/home'}}
+        #override_dic = {'Dataset' : ['train_size=1000', 'root_path=/home']}
+
+        if '.' in ov:
+            target = ov.split('.')[0]
+            parameter = ov.split('.')[1].split('=')[0]
+            value = ov.split('.')[1].split('=')[1]
+            print(f"\ntarget: {target}\nparameter: {parameter}\nvalue: {value}\n") 
+
+            print(report_configs[target])
+            
+            # report_configs[target] = []
+            try:
+                report_configs['Override'][target][parameter] = value
+            
+            except KeyError:
+                report_configs['Override'][target] = {}
+                report_configs['Override'][target][parameter] = value
+
+            #[target].append(ov.split('.')[1])
+
+            #report_configs["Multirun"].remove(ov)
+            #x = car.setdefault("trim", "TLX")
+            #[parameter] = value
+            #.setdefault(target, )
+            #report_configs["Override"][target]e# += {parameter: value}
+
+
+            print(report_configs)
+        
+        else:
+            report_configs["Multirun"].setdefault(ov.split('=')[0], ov.split('=')[1])
     return report_configs
 
 
@@ -222,22 +263,25 @@ def main(hydra_cfg: DictConfig):
 
     for log_dir, check_point_path in check_point_paths.items():
 
+        # load test dataset
         test_dataset = load_dataset(hydra_cfg, check_point_path)
         test_loader = DataLoader(test_dataset, **hydra_cfg.Dataloader.test)
 
+        # load configs from train log
         model, report_configs = load_model(hydra_cfg, check_point_path)
 
         dataset_name = report_configs["Dataset"]
         train_columns = list(hydra_cfg[dataset_name].train_cols)
 
         print(train_columns)
-        # test
+        
+        ### inference ### 
         micro_auroc_score, macro_auroc_score, class_auroc_score = predict(
             hydra_cfg, model, test_loader, train_columns
         )
         test_score.append(macro_auroc_score)
 
-        # saving configs
+        # save additional configs
         report_configs["log_dir"] = log_dir
         report_configs["test_roc_auc"] = macro_auroc_score
         report_configs["micro_roc_auc"] = micro_auroc_score

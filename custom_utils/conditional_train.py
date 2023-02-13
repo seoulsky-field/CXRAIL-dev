@@ -7,8 +7,6 @@ import pandas as pd
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
-from libauc.metrics import auc_roc_score
-from torchmetrics.classification import MultilabelAUROC
 
 # hydra
 import hydra

@@ -17,7 +17,7 @@ def get_merged_csv(root_dir, labeling_method):
     unzip_csv(root_dir=root_dir)
 
     target_label_df = pd.read_csv(os.path.join(root_dir, f'mimic-cxr-2.0.0-{labeling_method}.csv'))
-    metadata_df = pd.read_csv(os.path.join(root_dir, 'mimic-cxr-2.0.0-metadata.csv'))
+    metadata_df = pd.read_csv(os.path.join(root_dir, 'mimic-pad224-metadata.csv'))
     split_df = pd.read_csv(os.path.join(root_dir, 'mimic-cxr-2.0.0-split.csv'))
 
     return pd.merge(
@@ -51,7 +51,7 @@ def get_splitted_mimic_csv(root_dir, labeling_method):
 
 if __name__=="__main__":
     
-    root_dir = '/home/mimic_pad224/2.0.0'
+    root_dir = '/home/mimic-pad224/2.0.0'
 
     get_splitted_mimic_csv(root_dir=root_dir, labeling_method='chexpert')
     get_splitted_mimic_csv(root_dir=root_dir, labeling_method='negbio')

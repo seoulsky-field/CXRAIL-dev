@@ -27,7 +27,6 @@ class CXRDataset(Dataset):
         root_path,
         folder_path,
         image_size,
-        labeler_path,  # default settings
         shuffle,
         seed,
         verbose,  # experiment settings
@@ -49,7 +48,6 @@ class CXRDataset(Dataset):
         # path
         self.root_path = root_path
         self.folder_path = folder_path
-        self.labeler_path = labeler_path
 
         # columms
         self.train_cols = train_cols
@@ -78,7 +76,7 @@ class CXRDataset(Dataset):
                 self.df = pd.read_csv(
                     os.path.join(self.root_path + self.folder_path, self.mode + ".csv")
                 )
-            elif self.labeler == "CheXbert" or self.labeler == "VisualCheXbert":
+            elif self.labeler == "cheXbert" or self.labeler == "visualCheXbert":
                 if self.mode == "train":
                     self.df = pd.read_csv(
                         os.path.join(
@@ -94,8 +92,11 @@ class CXRDataset(Dataset):
                     )
         elif self.dataset == "MIMIC":
             self.df = pd.read_csv(
-                os.path.join(self.labeler_path, self.labeler, self.mode + ".csv")
-            )  # label이 지금은 임시 directory에 있기 labeler path를 따로 인자로 받고있는데, 나중에 수정가능 할 것 같습니다.
+                os.path.join(
+                    self.root_path + self.folder_path,
+                    self.mode + "_" + self.labeler + ".csv",
+                )
+            )
 
         # Use frontal
         if self.use_frontal is True:

@@ -1,0 +1,31 @@
+# default settings
+dataset: "BRAX"
+labeler: "CheXpert"    # only CheXpert
+root_path: "/home/"
+folder_path: "brax-pad224"
+image_size: 224
+
+# experiment settings
+shuffle: True
+seed: ${seed}
+verbose: 0
+
+# etc
+use_frontal: True
+use_enhancement: False # upsampling
+enhance_time: 1
+flip_label: False
+label_smoothing: False
+smooth_mode: "pos" # or 'neg'
+train_size: null
+augmentation_mode: random # auto , random, custom
+
+train_cols:
+  - "Cardiomegaly"
+  - "Edema"
+  - "Consolidation"
+  - "Atelectasis"
+  - "Pleural Effusion"
+enhance_cols:
+  - "Cardiomegaly"
+  - "Consolidation"

@@ -97,6 +97,10 @@ class CXRDataset(Dataset):
                     self.mode + "_" + self.labeler + ".csv",
                 )
             )
+        elif self.dataset == "BRAX":
+            self.df = pd.read_csv(
+                os.path.join(self.root_path + self.folder_path, self.mode + ".csv")
+            )
 
         # Use frontal
         if self.use_frontal is True:
@@ -254,7 +258,15 @@ class CXRDataset(Dataset):
             )
 
         # image, target
-        self._images_list = [self.root_path + path for path in self.df["Path"].tolist()]
+        if self.dataset == "BRAX":
+            self._images_list = [
+                os.path.join(self.root_path + self.folder_path, path)
+                for path in self.df["PngPath"].tolist()
+            ]
+        else:
+            self._images_list = [
+                self.root_path + path for path in self.df["Path"].tolist()
+            ]
 
         if len(self.train_cols) == 1:
             self.targets = self.df[self.train_cols[0]].values[:].tolist()

@@ -19,7 +19,7 @@ flip_label: False
 label_smoothing: False
 smooth_mode: 'pos'    # You can choose two options: pos, neg
 train_size: null
-augmentation_mode: random    # You can choose two options: auto,random, custom
+augmentation_mode: random    # You can choose three options: auto, random, custom
 
 train_cols:
   - "Cardiomegaly"

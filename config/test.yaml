@@ -19,6 +19,7 @@ defaults:
   # select Dataset
   - Dataset@CheXpert: CheXpert
   - Dataset@MIMIC: MIMIC
+  - Dataset@BRAX: BRAX
 
   # select Model:
   - model@densenet: densenet

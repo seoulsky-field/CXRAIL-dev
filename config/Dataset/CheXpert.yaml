@@ -3,7 +3,6 @@ dataset: "CheXpert"
 labeler: "CheXpert"    # CheXpert or CheXbert or VisualCheXbert
 root_path: "/home/dataset/chexpert/"
 folder_path: "CheXpert-v1.0-pad224" #CheXpert-v1.0-small/"
-labeler_path: None
 image_size: 224
 
 # experiment settings

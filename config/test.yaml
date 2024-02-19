@@ -1,0 +1,29 @@
+lr: 0.0001
+batch_size: 32
+weight_decay: 0.0001
+
+###user modifiable configs###
+epochs: 2
+seed: 12345
+num_workers: 2
+num_classes: 5
+
+log_dir: ./logs/inference/loss_func/${now:%Y-%m-%d_%H-%M-%S}
+save_dir: ${log_dir}/${hydra:job.override_dirname}
+
+
+defaults:
+  - _self_
+  - Dataloader: Dataloader
+
+  # select Dataset
+  - Dataset@CheXpert: CheXpert
+  - Dataset@MIMIC: MIMIC
+  - Dataset@BRAX: BRAX
+
+  # select Model:
+  - model@densenet: densenet
+  - model@resnet: resnet
+  - model@swin_transformer: swin_transformer
+
+save_auroc_plot: True    # Save AUROC plot

@@ -1,0 +1,32 @@
+# default settings
+dataset: "MIMIC"
+labeler: "chexpert"    # You can choose two options: chexpert, negbio
+root_path: "/home/dataset/"
+folder_path: "mimic-pad224/2.0.0"
+
+image_size: 224
+
+# experiment settings
+shuffle: True
+seed: ${seed}
+verbose: 1
+
+# etc
+use_frontal: True
+use_enhancement: False    # upsampling
+enhance_time: 1
+flip_label: False
+label_smoothing: False
+smooth_mode: 'pos'    # You can choose two options: pos, neg
+train_size: null
+augmentation_mode: random    # You can choose three options: auto, random, custom
+
+train_cols:
+  - "Cardiomegaly"
+  - "Edema"
+  - "Consolidation"
+  - "Atelectasis"
+  - "Pleural Effusion"
+enhance_cols:
+  - "Cardiomegaly"
+  - "Consolidation"
